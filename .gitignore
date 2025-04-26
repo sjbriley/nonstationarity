@@ -1,0 +1,10 @@
+data/simulated/
+data/eda/
+data/WESAD/
+data/wesad/
+data/wesad_raw/
+data/WESAD_raw/
+virtualenv/
+.DS_Store
+*.txt*
+__pycache__/

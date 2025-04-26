@@ -1,5 +1,5 @@
 import pandas as pd
-import numpy as np 
+import numpy as np
 import sys, os, math, time
 import glob as glob
 import pickle
@@ -31,12 +31,12 @@ def print_to_file(statement):
     file = f'debug_{DATASET}_3secs_021124.txt'
 
     logging.basicConfig(filename=file, level=logging.DEBUG, format='')
-    
+
     logging.debug(statement)
-    
+
 def check_for_significance(pt_sample):
     remove_ckp_index = []
-    bkps = pt_sample[pt_sample['cpd'] == 1].index #list of the breakpoints index 
+    bkps = pt_sample[pt_sample['cpd'] == 1].index #list of the breakpoints index
     for i in range(len(bkps)):
         #print(f'-------------------------------bkp: {i}: index: {bkps[i]}')
         if(i == 0):
@@ -50,14 +50,14 @@ def check_for_significance(pt_sample):
             post_bkp = pt_sample[bkps[i]:bkps[i+1]]
 
         sig_diff = eda_utils.check_sig_diff(pre_bkp['eda_signal'],post_bkp['eda_signal'])
-        #print(f'{pre_mean}:{post_mean}:{sig_diff}') 
+        #print(f'{pre_mean}:{post_mean}:{sig_diff}')
         if (sig_diff == False):
             remove_ckp_index.append(bkps[i])
-            
+
     for i in remove_ckp_index:
         pt_sample.at[i,'cpd']=0
-        
-    bkps_after = pt_sample[pt_sample['cpd'] == 1].index 
+
+    bkps_after = pt_sample[pt_sample['cpd'] == 1].index
 
     print(f"Number of bkps Before: {len(bkps)}: After:{len(bkps_after)}. Percentage dropped: {((len(bkps)-len(bkps_after))/len(bkps))*100}")
     print(f"Class label Distribution \n {pt_sample['cpd'].value_counts()} \n {pt_sample['cpd'].value_counts(normalize=True)}")
@@ -67,7 +67,7 @@ def type_of_change(pt_sample):
     means_list = [] #change in means list
     std_list = []
     type_of_change = []
-    bkps = pt_sample[pt_sample['cpd'] == 1].index #list of the breakpoints index 
+    bkps = pt_sample[pt_sample['cpd'] == 1].index #list of the breakpoints index
     pt_sample['mean_change'] = np.nan
     pt_sample['std_change'] = np.nan
     pt_sample['type_of_change'] = np.nan
@@ -84,12 +84,12 @@ def type_of_change(pt_sample):
             post_bkp = pt_sample[bkps[i]:bkps[i+1]]
         pre_mean = mean(pre_bkp['eda_signal'])
         post_mean = mean(post_bkp['eda_signal'])
-        
+
         diff_mean = post_mean - pre_mean
-        diff_std = np.std(post_bkp['eda_signal']) -  np.std(pre_bkp['eda_signal']) 
+        diff_std = np.std(post_bkp['eda_signal']) -  np.std(pre_bkp['eda_signal'])
         #print(f'Diff Mean={diff_mean}: Diff Std={diff_std}')
         #print_to_file(f'Diff Mean={diff_mean}: Diff Std={diff_std}')
-        
+
         #if (((diff_mean > 0.5) or (diff_mean < -0.5)) and ((diff_std > 0.5) or (diff_std < -0.5))):
         if (((diff_mean > 0) or (diff_mean < 0)) and ((diff_std > 0) or (diff_std < 0))):
             #print_to_file("A change in both")
@@ -101,7 +101,7 @@ def type_of_change(pt_sample):
             pt_sample.at[bkps[i],'std_change']= diff_std
         elif ((diff_mean > 0) or (diff_mean < 0)):
             #print_to_file("A change in mean")
-            type_of_change.append(1) # it's a change in mean 
+            type_of_change.append(1) # it's a change in mean
             means_list.append(diff_mean)
             pt_sample.at[bkps[i],'type_of_change']='mean'
             pt_sample.at[bkps[i],'mean_change']= diff_mean
@@ -111,7 +111,7 @@ def type_of_change(pt_sample):
             std_list.append(diff_std)
             pt_sample.at[bkps[i],'type_of_change']='std'
             pt_sample.at[bkps[i],'std_change']= diff_std
-        
+
     return pt_sample,type_of_change, means_list, std_list
 
 
@@ -165,7 +165,9 @@ def build_cpd_model(X_train):
         print_to_file(f"Predicted prob: {y_prob}")
         #metrics_report = classification_report(y_test, y_pred, output_dict=True)
         precision_, recall_, acc, f1, cm, auroc, auprc = calculate_metrics(y_test, y_pred, y_prob)
-        pd.DataFrame({'y_actual': y_test, 'y_pred': y_pred, 'y_prob': y_prob}).to_csv(f"models/classifier_predictions/{id}.csv")
+        out_dir = "models/classifier_predictions/"
+        os.makedirs(out_dir, exist_ok=True)
+        pd.DataFrame({'y_actual': y_test, 'y_pred': y_pred, 'y_prob': y_prob}).to_csv(f"{out_dir}/{id}.csv")
         print_to_file(f"ID: {id}. p|r|acc|f1|cm: {precision_, recall_, acc, f1, cm.ravel()}") #TN, FP,FN,TP
         print_to_file(f"AUROC: {auroc} | AUPRC: {auprc}")
         conf = metrics.confusion_matrix(y_test, y_pred).ravel()
@@ -177,7 +179,7 @@ def build_cpd_model(X_train):
         recall.append(recall_)
         auroc_lst.append(auroc)
         auprc_lst.append(auprc)
-            
+
     mdl_result = pd.DataFrame({
                 'PID': ids,
                 'Accuracy': accuracy,
@@ -187,7 +189,7 @@ def build_cpd_model(X_train):
                 'AUROC':auroc_lst,
                 'AUPRC':auprc_lst
             })
-
+    os.makedirs(f"models/WESAD", exist_ok=True)
     mdl_result.to_csv(f"models/WESAD/classifier_021024.csv", index=False)
     X_train_total = X_train.drop(columns=['y', 'PID'])
     y_train_total = X_train['y']
@@ -229,37 +231,37 @@ def main():
 
     if (DATASET=='WESAD'):
         print (DATASET)
-        learning_Ids = pd.read_csv(f'data/{DATASET}_learning_ids.csv')['ID'].tolist() #['S4', 'S9'] 
-        annonated_files = str(sys.argv[3]) #folder ro save them in 
+        learning_Ids = pd.read_csv(f'data/{DATASET}_learning_ids.csv')['ID'].tolist() #['S4', 'S9']
+        annonated_files = str(sys.argv[3]) #folder ro save them in
         frequency = 4 #700Hz
-        window_size =  str(sys.argv[4]) 
+        window_size =  int(str(sys.argv[4]))
     bkps_count_file = str(sys.argv[5])
-    mdl_file = str(sys.argv[5]) #pickle file
+    mdl_file = str(sys.argv[6]) #pickle file
 
     now = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
     print_to_file(f"{now}-----------------------------NOW STARTING A NEW RUN- LEARNING.PY")
-        
+
     print(f"Number of patients: {len(learning_Ids)}")
 
     all_pt = pd.DataFrame()
     X_train_total = pd.DataFrame()
 
     #------------------------------------------comment just to run classifier
-    for i in range(len(learning_Ids)): 
+    for i in range(len(learning_Ids)):
         patient_id = learning_Ids[i]
         print(f"i: {i} || Working on patient: {learning_Ids[i]}")
 
-        #load eda data 
+        #load eda data
         pt_sample = pd.read_csv(f'{input_folder}/{patient_id}/{patient_id}_eda.csv')
         pt_sample['cpd'] = 0
         print_to_file(f"i: {i} || Working on patient: {learning_Ids[i]}. Patient length: {len(pt_sample)}")
         pt_sample = pt_sample.dropna()
         #pt_sample.set_index("dates", inplace=True)
-        
+
         print_to_file("Get the change point and duration")
         trends = eda_utils.identify_df_trends(pt_sample, "eda_signal", frequency, window_size)
         #result, trends = cpd_utils.large_missing_intervals(trends, 120) #no need since there is no timestamp
-        pt_data = eda_utils.annonate_cp_duration(trends) #annotate the data with the duration and cp
+        pt_data = eda_utils.annotate_cp_duration(pt_sample, trends) #annotate the data with the duration and cp
 
         #drop the non-significant
         pt_data, len_bkps, len_bkps_after = check_for_significance(pt_data)
@@ -269,14 +271,14 @@ def main():
         pt_list.append(learning_Ids[i])
 
         #get the duration from the samples length
-        pt_data['duration'] = pt_data['duration_samples']/frequency #in seconds 
-        
+        pt_data['duration'] = pt_data['duration_samples']/frequency #in seconds
+
         #find the drastic jumps in the data (glucose at t - glucose at t-1)
         #pt_data['time_diff'] = pt_data['dates'].diff()
         pt_data['diff'] = pt_data['eda_signal'].diff()
         eda_diff = pt_data['diff']
         eda_diff_list = eda_diff.tolist()
-        
+
         if (len_bkps_after > 1):
             #get the duration
             duration = pt_data[pt_data['cpd'] == 1]['duration']
@@ -286,7 +288,7 @@ def main():
             print_to_file("Get the change type and intensity")
             pt_data, change_type, means, std = type_of_change(pt_data)
             print_to_file(f"Length of the change types, means, std: {len(change_type)} {len(means)} {len(std)}")
-            
+
             #append the type and intensity of change
             all_type_of_change.extend(change_type)
             all_means.extend(means)
@@ -294,7 +296,7 @@ def main():
             all_duration.extend(duration_list)
             all_eda_diff.extend(eda_diff_list)
 
-            ## save the files 
+            ## save the files
             file_name = f"{learning_Ids[i]}.csv"
             file_path = os.path.join(annonated_files,file_name)
             os.makedirs(annonated_files, exist_ok=True)
@@ -311,8 +313,8 @@ def main():
             zeros = Counter(y_train)[0]
             ones = Counter(y_train)[1]
             print_to_file(f"Number of rows in X_train data: {len(X_train)}. in y_train: {len(y_train)}: len of 0={zeros}, 1={ones}")
-            
-            ## save the features to verify correctness 
+
+            ## save the features to verify correctness
             file_name = f"{learning_Ids[i]}_features.csv"
             file_path = os.path.join(annonated_files,file_name)
             os.makedirs(annonated_files, exist_ok=True)
@@ -333,6 +335,7 @@ def main():
 
     #build classifier model for change point detection
     X_train_total['y'] = y_train_total #combine into one df
+    os.makedirs("models", exist_ok=True)
     X_train_total.to_csv(f"models/{DATASET}_classifier_data.csv")
     print_to_file(all_pt.tail(5))
     #'''#--------------------------------------------------------------------comment just to run classifier
@@ -340,7 +343,7 @@ def main():
     print_to_file(f"Total rows for all patients: {len(X_train_total)}")
     cpd_mdl = build_cpd_model(X_train_total)
     print("Training completed")
-    
+
 
     #save the distribution to pkl
     mdl = {"mdl":cpd_mdl, "type_of_change":type_of_change_list,
@@ -354,6 +357,7 @@ def main():
     bkps_df['PtID'] = pt_list
     bkps_df['before_checking'] = bkps_before
     bkps_df['after_checking'] = bkps_after
+
     bkps_df.to_csv(bkps_count_file)
     print_to_file(f"{now}-----------------------------END OF THE RUN- LEARNING.PY")
 

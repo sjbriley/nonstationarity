@@ -32,7 +32,7 @@ def compute_features(window_data):
 def extract_features(df_patient, sampling_freq, window_size):
     '''
     window_size in seconds.
-    If freq is 4Hz, and the window_size is 10 secs, that's 40 samples 
+    If freq is 4Hz, and the window_size is 10 secs, that's 40 samples
     '''
     window_length = window_size * sampling_freq
     feature_vectors = []
@@ -120,7 +120,7 @@ def model_training(data_name, mdl, train_data, test_data):
     conf_matrix = confusion_matrix(y_test, y_pred)
 
     return {
-        'Accuracy':accuracy_score(y_test, y_pred), 
+        'Accuracy':accuracy_score(y_test, y_pred),
         'Precision':precision_score(y_test, y_pred),
         'Recall':recall_score(y_test, y_pred),
         'F1_Score':f1_score(y_test, y_pred),
@@ -133,9 +133,9 @@ def model_training(data_name, mdl, train_data, test_data):
 
 def main():
     data_name = str(sys.argv[1])
-    data_folder = str(sys.argv[2])  #folder containing the patient files 
+    data_folder = str(sys.argv[2])  #folder containing the patient files
     result_folder = str(sys.argv[3]) #folder to save the results files.
-    freq = 4 
+    freq = 4
     window_size = 10
     print(data_folder)
 
@@ -173,10 +173,10 @@ def main():
         results_df['Patient_ID'] = pt_lst
         results_df = results_df[['Patient_ID', 'Accuracy', 'Precision', 'Recall', 'F1_Score','True_Negative',
                                     'False_Positive','False_Negative','True_Positive']]
-        os.makedirs(result_folder, exist_ok=True) 
+        os.makedirs(result_folder, exist_ok=True)
         results_df.to_csv(f'{result_folder}/{mdl}.csv')
         print('Classification Complete!')
-        
+
 
 
 

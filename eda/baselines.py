@@ -24,7 +24,7 @@ def print_to_file(statement):
     file = f'debug_{DATASET}_baseline.txt'
 
     logging.basicConfig(filename=file, level=logging.DEBUG, format='')
-    
+
     logging.debug(statement)
 
 def generate_durations(indices, freq, dur_array, df_length):
@@ -53,7 +53,7 @@ def predict_cpd_duration_1(file, filename, cpd_count, min_duration, max_duration
     #index_arr = [random.randint(0, len(df)) for _ in range(cpd_count)]
     index_arr = random.sample(range(len(df)), cpd_count) #random unique values
     index_arr.sort()
-    duration_arr = generate_durations(index_arr, freq,  min_duration, max_duration, len(df)) 
+    duration_arr = generate_durations(index_arr, freq,  min_duration, max_duration, len(df))
     cpd_details = pd.DataFrame()
     cpd_details['CPD_Index'] = index_arr
     cpd_details['duration'] = duration_arr
@@ -64,7 +64,7 @@ def generate_indices(data_len, mindist, cpd_count):
     Genrate the random indices for the chnagepoints
     such that min duration is maintained between the generated changepoints
     '''
-    range_size = data_len - ((mindist - 1) * (cpd_count -1)) 
+    range_size = data_len - ((mindist - 1) * (cpd_count -1))
     print(range_size)
     #return [(mindist-1)*i + x for i, x in enumerate(sorted(random.sample(range(range_size), cpd_count)))]
     return [(mindist-1)*i + x for i, x in enumerate(sorted(random.sample(range(1, range_size), cpd_count)))]
@@ -87,10 +87,10 @@ def predict_cpd_duration(file, filename, cpd_count_arr, duration, dist_type):
         print_to_file("cpd < 0")
 
     index_arr = generate_indices(len(df),int(min_duration*freq)+2, cpd_count+1) #[random.randint(0, len(per_day)) for _ in range(cpd_count)]
-    index_arr = index_arr[:cpd_count] 
-    
+    index_arr = index_arr[:cpd_count]
+
     index_arr.sort()
-    duration_arr = generate_durations(index_arr, freq, duration, len(df)) 
+    duration_arr = generate_durations(index_arr, freq, duration, len(df))
     cpd_details = pd.DataFrame()
     cpd_details['CPD_Index'] = index_arr
     cpd_details['duration'] = duration_arr
@@ -102,20 +102,20 @@ def predict_change_properties_1(file, filename, cpd_details_folder, cpd_count, m
     types_prop = [1] #mdl_dict['type_of_change']['prob']
     print_to_file(types)
     print_to_file(types_prop)
-    
+
     ### Sample the type and size of change
     bkps_len = len(cpd_details)
     print_to_file(f"Total cpd in this file : {bkps_len} {(cpd_details)}")
     type_change = np.random.choice(a=types,size=bkps_len)
-    
+
     mean_change_drawn =  np.round(np.random.uniform(-0.8, 1.7, size=bkps_len), 1) #used 10 to 50 b4
     std_change_drawn = np.round(np.random.uniform(-0.7, 0.8, size=bkps_len), 1)
-    
+
     cpd_details['type_of_change'] = type_change
     cpd_details['mean_change'] = mean_change_drawn
     cpd_details['std_change'] = std_change_drawn
 
-    #save the cpd_details - TO DO 
+    #save the cpd_details - TO DO
     file_name = f"{filename}.csv"
     file_path = os.path.join(cpd_details_folder,file_name)
     os.makedirs(cpd_details_folder, exist_ok=True)
@@ -158,12 +158,12 @@ def predict_change_properties(file, filename, cpd_details_folder,cpd_count, dura
         std_change_drawn = np.round(np.random.normal(std_change[2], std_change[3], size=bkps_len), 1)
         types = ['mean+std']
 
-    type_change = types * bkps_len 
+    type_change = types * bkps_len
     cpd_details['type_of_change'] = type_change
     cpd_details['mean_change'] = mean_change_drawn
     cpd_details['std_change'] = std_change_drawn
 
-    #save the cpd_details - TO DO 
+    #save the cpd_details - TO DO
     file_name = f"{filename}"
     file_path = os.path.join(cpd_details_folder,file_name)
     os.makedirs(cpd_details_folder, exist_ok=True) #create the folder if it doesnt exist
@@ -184,7 +184,7 @@ def predict_change_properties(file, filename, cpd_details_folder,cpd_count, dura
 
 def insert_values(df, index_list, values_list,col_name):
     for i in range(len(index_list)):
-        df.at[index_list[i], col_name] = values_list[i] 
+        df.at[index_list[i], col_name] = values_list[i]
     return df
 def insert_one_value(df, index, value,col_name):
     df.at[index, col_name] = value
@@ -196,7 +196,7 @@ def modify_property_1(change_type, post_ckp, change_mu, change_sigma,
     mu1 = np.mean(post_ckp) #post_bkp_mean  #initial mean
     sigma1 = 0.001 if (np.std(post_ckp) == 0) else np.std(post_ckp)
     sigma2 = 0.001
-    
+
     if np.isnan(pre_mean):
         adjustment = change_mu
     else:
@@ -208,7 +208,7 @@ def modify_property_1(change_type, post_ckp, change_mu, change_sigma,
     mean_change_new_list = []
     #print("---------In modify property function-------")
     #print(f"change_mu:{change_mu} | duration:{duration} | adjustment: {adjustment} | len_of_dur: {len(duration_array)}")
-        
+
     for i in range(len(duration_array)):
         #print(f'handling new value {i}')
 
@@ -221,7 +221,7 @@ def modify_property_1(change_type, post_ckp, change_mu, change_sigma,
             #print('After gradual')
         else:
             change = (adjustment/duration) * time_passed
-        
+
         if (change_type=='mean+std'):
             sigma2 = pre_sigma + change_sigma
             new_value = post_ckp[i] + (change * (sigma2/sigma1))
@@ -230,11 +230,11 @@ def modify_property_1(change_type, post_ckp, change_mu, change_sigma,
         elif(change_type=='std'):
             sigma2 = pre_sigma + change_sigma
             new_value = post_ckp[i] + (sigma2/sigma1)
-        
+
         if new_value < min_value:
             new_value = min_value
         elif new_value > max_value:
-            new_value = max_value    
+            new_value = max_value
 
         #print(f"index: {i} | time_passed: {time_passed} | change: {change} | old_value: {post_ckp[i]} | new_value: {new_value}")
         post_ckp_new.append(new_value)
@@ -252,7 +252,7 @@ def modify_values_1(df, freq):
     df['mean_change_new'] = df['mean_change']
     df_new = pd.DataFrame()
 
-    bkps = df[df['cpd'] == 1].index #list of the breakpoints index 
+    bkps = df[df['cpd'] == 1].index #list of the breakpoints index
     print(df[df['cpd'] == 1])
     print(f"{len(bkps)} changepoints: {bkps}")
     for i in range(len(bkps)):
@@ -266,7 +266,7 @@ def modify_values_1(df, freq):
         change_duration = df['duration'].iloc[bkps[i]]
         print(f'Sample change in mean: {change_mu}. Sample change in std: {change_sigma}. Duration: {change_duration}')
 
-        start_gradual = bkps[i] #df['dates'].iloc[bkps[i]] #index of the start 
+        start_gradual = bkps[i] #df['dates'].iloc[bkps[i]] #index of the start
         end_gradual = start_gradual + int(change_duration * freq) #start_gradual + timedelta(minutes=int(change_duration))
         print_to_file(f"Start_gradual:{start_gradual} || End Gradual:{end_gradual}")
         print(f"Start_gradual:{start_gradual} || End Gradual:{end_gradual}")
@@ -293,7 +293,7 @@ def modify_values_1(df, freq):
                                                                     change_mu, change_sigma,
                                         change_duration, post_bkp.index.tolist(), pre_bkp_mean, pre_sigma,
                                         min_value, max_value, previous_value)
-        
+
         print(f'Pre chkp mean:{pre_bkp_mean} || Old postchkp mean: {post_bkp_mean} || New postchkp mean:{mean(post_ckp_after_gradual_new)} || Previous value: {previous_value}.')
 
         if (len(post_bkp_new) != 0):
@@ -310,7 +310,7 @@ def gradual_mean_change(post_ckp, duration_array, mu1, mu2, duration):
         time_passed = 1 if time_passed == 0 else time_passed
         if (time_passed > duration):
             new_val = post_ckp[i] + (mu2 - mu1)
-        else: 
+        else:
             new_val = post_ckp[i] + ((mu2 - mu1)/duration) * time_passed
         new_vals.append(new_val)
     return new_vals
@@ -331,7 +331,7 @@ def modify_property(change_type, post_bkp, change_properties, pre_bkp, threshold
     print_to_file(f"pre_mean: {pre_mean}")
     pre_sigma = np.std(pre_bkp['eda_signal_new'])
     min_value = threshold_values[0] #min eda value
-    max_value = threshold_values[1] #max eda value 
+    max_value = threshold_values[1] #max eda value
     #threshold = threshold_values [2] #the threshold for the maximum  drastic diff btw cosecutive measurements
     change_sigma_new = np.nan
 
@@ -339,7 +339,7 @@ def modify_property(change_type, post_bkp, change_properties, pre_bkp, threshold
     sigma1 = 0.001 if (np.std(post_ckp) == 0) else np.std(post_ckp)
     sigma2 = 0.001
     sigma2_new = 0.001
-    
+
     # #if np.isnan(pre_mean):
     #    # adjustment = change_mu
     # else:
@@ -379,7 +379,7 @@ def modify_property(change_type, post_bkp, change_properties, pre_bkp, threshold
             new_value = min_value
         elif new_value > max_value:
             print_to_file("Value too high")
-            new_value = max_value    
+            new_value = max_value
 
         #print(f"index: {i} | time_passed: {time_passed} | change: {change} | old_value: {post_ckp[i]} | new_value: {new_value}")
         print_to_file(f"initial_value: {post_ckp[i]} | new_value_original: {new_value_original} | new_value: {new_value} | prev_value: {previous_value}")
@@ -394,7 +394,7 @@ def modify_values(df, freq):
     df['std_change_new'] = df['std_change']
     df_new = pd.DataFrame()
 
-    bkps = df[df['cpd'] == 1].index #list of the breakpoints index 
+    bkps = df[df['cpd'] == 1].index #list of the breakpoints index
     print(df[df['cpd'] == 1])
     print(f"{len(bkps)} changepoints: {bkps}")
     for i in range(len(bkps)):
@@ -408,7 +408,7 @@ def modify_values(df, freq):
         change_duration = df['duration'].iloc[bkps[i]]
         print(f'Sample change in mean: {change_mu}. Sample change in std: {change_sigma}. Duration: {change_duration}')
 
-        start_gradual = bkps[i] #df['dates'].iloc[bkps[i]] #index of the start 
+        start_gradual = bkps[i] #df['dates'].iloc[bkps[i]] #index of the start
         end_gradual = start_gradual + int(change_duration * freq) #start_gradual + timedelta(minutes=int(change_duration))
         print_to_file(f"Start_gradual:{start_gradual} || End Gradual:{end_gradual}")
         print(f"Start_gradual:{start_gradual} || End Gradual:{end_gradual}")
@@ -429,7 +429,7 @@ def modify_values(df, freq):
         change_properties = [change_mu, change_sigma,change_duration]
         threshold_values = [min_value, max_value]
         post_bkp_new_orig, post_bkp_new, std_change_new = modify_property(change_type,post_bkp,change_properties,pre_bkp,threshold_values,previous_value)
-            
+
         #print(f'Pre chkp mean:{pre_bkp_mean} || Old postchkp mean: {post_bkp_mean} || New postchkp mean:{mean(post_ckp_after_gradual_new)} || Previous value: {previous_value}.')
         if (len(post_bkp_new) != 0):
             df = insert_values(df, post_bkp.index, post_bkp_new_orig,'eda_signal_new_original')
@@ -447,21 +447,21 @@ def main():
 
     now = datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S")
     print_to_file(f"{now}-----------------------------NOW STARTING A NEW RUN- SIMULATING.PY")
-    
+
     if (DATASET=='WESAD'):
         #TO DO include ohio data link here
         print(DATASET)
-        input_folder = str(sys.argv[2]) 
-        output_folder = str(sys.argv[3]) 
+        input_folder = str(sys.argv[2])
+        output_folder = str(sys.argv[3])
         cpd_details_folder = str(sys.argv[4])
         cpd_count = [0,7,20,10,20] #last item in the array is the random value used for baseline1
         duration = [0, 0,0,0,0,10] #[min, max, mean, std, random_value]#seconds
-        mean_change =  [-226.88, 183.88, 0, 1,1] 
-        std_change =  [-93.50, 95.56, 0.1, 0.01,0.5] 
-        dist_type = '4'
+        mean_change =  [-226.88, 183.88, 0, 1,1]
+        std_change =  [-93.50, 95.56, 0.1, 0.01,0.5]
+        dist_type = str(sys.argv[5])
         freq=4
-        
-    
+
+
     for file in glob.glob(input_folder):
         filename2 = os.path.basename(file)
         filename = os.path.splitext(filename2)[0].split('_')[0]
@@ -470,15 +470,15 @@ def main():
         sim_data = predict_change_properties(file,filename,cpd_details_folder, cpd_count, duration, mean_change, std_change, dist_type)
         print_to_file("Done predicting change properties. Start modifying the values")
         sim_data = modify_values(sim_data,freq)
-    
-        #rename cols 
+
+        #rename cols
         new_column_names = {'eda_signal': 'eda_signal_old', 'eda_signal_new':'eda_signal'}
         # Rename the columns
         sim_data.rename(columns=new_column_names, inplace=True)
-        #save to the output folder 
-        #output_path = output_folder + filename2 
+        #save to the output folder
+        #output_path = output_folder + filename2
         output_path = os.path.join(output_folder,filename2)
-        os.makedirs(output_folder, exist_ok=True) 
+        os.makedirs(output_folder, exist_ok=True)
         print(output_path)
         sim_data.to_csv(output_path)
     print_to_file("Done processing all files!")

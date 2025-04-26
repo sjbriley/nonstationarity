@@ -27,7 +27,7 @@ def print_to_file(statement):
     file = f'debug_{DATASET}_3secs.txt'
 
     logging.basicConfig(filename=file, level=logging.DEBUG, format='')
-    
+
     logging.debug(statement)
 
 # Calculate the log-likelihood of the data given the bimodal distribution
@@ -76,7 +76,7 @@ def predict_cpd_duration(file, mdl_dict,filename):
     df['PtID'] = filename
     df['cpd'] = 0
     mdl = mdl_dict['mdl']
- 
+
     index_arr = []
     duration_arr = []
 
@@ -103,7 +103,7 @@ def predict_cpd_duration(file, mdl_dict,filename):
             duration_arr.append(dur) #seconds
             i = i + int(dur*freq)
         else:
-            i = i+1    
+            i = i+1
     cpd_details = pd.DataFrame()
     cpd_details['CPD_Index'] = index_arr
     cpd_details['duration'] = duration_arr
@@ -115,23 +115,23 @@ def predict_change_properties(file, mdl_dict, filename, cpd_details_folder):
     types_prop = mdl_dict['type_of_change']['prob']
     print_to_file(types)
     print_to_file(types_prop)
-    
+
     ### Sample the type and size of change
     bkps_len = len(cpd_details)
     print_to_file(f"Total cpd in this file : {bkps_len} {(cpd_details)}")
     type_change = np.random.choice(a=types,size=bkps_len,p=types_prop)
-    
+
     dist_name, params = eda_utils.get_dist(mdl_dict['mean_change'],data_name='mean_change')
     mean_change_drawn = sample_from_dist(mdl_dict['mean_change'],bkps_len, dist_name, params)
-    
+
     dist_name, params = eda_utils.get_dist(mdl_dict['std_change'],data_name='')
-    std_change_drawn = sample_from_dist(mdl_dict['std_change'], bkps_len, dist_name, params) 
-    
+    std_change_drawn = sample_from_dist(mdl_dict['std_change'], bkps_len, dist_name, params)
+
     cpd_details['type_of_change'] = type_change
     cpd_details['mean_change'] = mean_change_drawn
     cpd_details['std_change'] = std_change_drawn
 
-    #save the cpd_details - TO DO 
+    #save the cpd_details - TO DO
     file_name = f"{filename}.csv"
     file_path = os.path.join(cpd_details_folder,file_name)
     os.makedirs(cpd_details_folder, exist_ok=True)
@@ -149,10 +149,10 @@ def predict_change_properties(file, mdl_dict, filename, cpd_details_folder):
     print(f"len of the df: {len(df_final)}")
 
     return df_final
-    
+
 def insert_values(df, index_list, values_list,col_name):
     for i in range(len(index_list)):
-        df.at[index_list[i], col_name] = values_list[i] 
+        df.at[index_list[i], col_name] = values_list[i]
     return df
 
 def insert_one_value(df, index, value,col_name):
@@ -168,7 +168,7 @@ def modify_values_1(df, threshold):
     df['std_change_new'] = df['std_change']
     df_new = pd.DataFrame()
 
-    bkps = df[df['cpd'] == 1].index #list of the breakpoints index 
+    bkps = df[df['cpd'] == 1].index #list of the breakpoints index
     print(df[df['cpd'] == 1])
     print(f"{len(bkps)} changepoints: {bkps}")
     for i in range(len(bkps)):
@@ -182,7 +182,7 @@ def modify_values_1(df, threshold):
         change_duration = df['duration'].iloc[bkps[i]]
         print(f'Sample change in mean: {change_mu}. Sample change in std: {change_sigma}. Duration: {change_duration}')
 
-        start_gradual = bkps[i] #df['dates'].iloc[bkps[i]] #index of the start 
+        start_gradual = bkps[i] #df['dates'].iloc[bkps[i]] #index of the start
         end_gradual = start_gradual + int(change_duration * 4) #start_gradual + timedelta(minutes=int(change_duration))
         print_to_file(f"Start_gradual:{start_gradual} || End Gradual:{end_gradual}")
         print(f"Start_gradual:{start_gradual} || End Gradual:{end_gradual}")
@@ -209,7 +209,7 @@ def modify_values_1(df, threshold):
                                                                     change_mu, change_sigma,
                                         change_duration, post_bkp.index.tolist(), pre_bkp_mean, pre_sigma,
                                         min_value, max_value, previous_value, threshold)
-        
+
         print(f'Pre chkp mean:{pre_bkp_mean} || Old postchkp mean: {post_bkp_mean} || New postchkp mean:{mean(post_ckp_after_gradual_new)} || Previous value: {previous_value}.')
 
         if (len(post_bkp_new) != 0):
@@ -228,7 +228,7 @@ def modify_values(df, threshold):
     df['std_change_new'] = df['std_change']
     df_new = pd.DataFrame()
 
-    bkps = df[df['cpd'] == 1].index #list of the breakpoints index 
+    bkps = df[df['cpd'] == 1].index #list of the breakpoints index
     print(df[df['cpd'] == 1])
     print(f"{len(bkps)} changepoints: {bkps}")
     for i in range(len(bkps)):
@@ -242,7 +242,7 @@ def modify_values(df, threshold):
         change_duration = df['duration'].iloc[bkps[i]]
         print(f'Sample change in mean: {change_mu}. Sample change in std: {change_sigma}. Duration: {change_duration}')
 
-        start_gradual = bkps[i] #df['dates'].iloc[bkps[i]] #index of the start 
+        start_gradual = bkps[i] #df['dates'].iloc[bkps[i]] #index of the start
         end_gradual = start_gradual + int(change_duration * 4) #start_gradual + timedelta(minutes=int(change_duration))
         print_to_file(f"Start_gradual:{start_gradual} || End Gradual:{end_gradual}")
         print(f"Start_gradual:{start_gradual} || End Gradual:{end_gradual}")
@@ -279,7 +279,7 @@ def gradual_mean_change(post_ckp, duration_array, mu1, mu2, duration):
         time_passed = 1 if time_passed == 0 else time_passed
         if (time_passed > duration):
             new_val = post_ckp[i] + (mu2 - mu1)
-        else: 
+        else:
             new_val = post_ckp[i] + ((mu2 - mu1)/duration) * time_passed
         new_vals.append(new_val)
     return new_vals
@@ -299,14 +299,14 @@ def modify_property(change_type, post_bkp, change_properties, pre_bkp, threshold
     print_to_file(f"pre_mean: {pre_mean}")
     pre_sigma = np.std(pre_bkp['eda_signal_new'])
     min_value = threshold_values[0] #min glucose value
-    max_value = threshold_values[1] #max glucose value 
+    max_value = threshold_values[1] #max glucose value
     threshold = threshold_values [2] #the threshold for the maximum  drastic diff btw cosecutive measurements
     std_change_new = np.nan
-    
+
     mu1 = np.mean(post_ckp) #post_bkp_mean  #initial mean
     sigma1 = 0.001 if (np.std(post_ckp) == 0) else np.std(post_ckp)
     sigma2 = 0.001
-    
+
     mu2 = mu1 + change_mu if (np.isnan(pre_mean)) else (pre_mean + change_mu) #desired mean
 
     post_ckp_new = []
@@ -338,7 +338,7 @@ def modify_property(change_type, post_bkp, change_properties, pre_bkp, threshold
             new_value = min_value
         elif new_value > max_value:
             print_to_file("Value too high")
-            new_value = max_value    
+            new_value = max_value
         #print(f"index: {i} | time_passed: {time_passed} | change: {change} | old_value: {post_ckp[i]} | new_value: {new_value}")
         print_to_file(f"initial_value: {post_ckp[i]} | new_value_original: {new_value_original} | new_value: {new_value} | prev_value: {previous_value}")
         post_ckp_new.append(new_value)
@@ -351,12 +351,14 @@ def main():
     mdl_file =str(sys.argv[4])
     cpd_details_folder = str(sys.argv[5])
     threshold = str(sys.argv[6])
-    
+
+    print(f'{input_folder=}, {output_folder=}, {mdl_file=}, {cpd_details_folder=}, {threshold=}')
+
     now = datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S")
     print_to_file(f"{now}-----------------------------NOW STARTING A NEW RUN- SIMULATING.PY")
-    
+
     print(DATASET)
-        
+
     mdl_dict = pickle.load(open(mdl_file, 'rb'))
     for file in glob.glob(input_folder):
         filename2 = os.path.basename(file)
@@ -366,13 +368,13 @@ def main():
         sim_data = predict_change_properties(file, mdl_dict,filename,cpd_details_folder)
         print_to_file("Done predicting change properties. Start modifying the values")
         sim_data = modify_values(sim_data, threshold)
-        
-        #rename cols 
+
+        #rename cols
         new_column_names = {'eda_signal': 'eda_signal_old', 'eda_signal_new':'eda_signal'}
         # Rename the columns
         sim_data.rename(columns=new_column_names, inplace=True)
-        #save to the output folder 
-        #output_path = output_folder + filename2 
+        #save to the output folder
+        #output_path = output_folder + filename2
         output_path = os.path.join(output_folder,filename2)
         os.makedirs(output_folder, exist_ok=True)
         sim_data.to_csv(output_path)
