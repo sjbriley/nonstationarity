@@ -47,6 +47,8 @@ def generate_durations(indices, freq, dur_array, df_length):
 def predict_cpd_duration_1(file, filename, cpd_count, min_duration, max_duration):
     print("Predicting changepoint")
     df = pd.read_csv(file)
+    REAL_MEAN = 1.3347262513238476
+    df['eda_signal'] *= REAL_MEAN / df['eda_signal'].mean()
     df['PtID'] = filename
     df['cpd'] = 0
     freq = 4
@@ -72,6 +74,8 @@ def generate_indices(data_len, mindist, cpd_count):
 def predict_cpd_duration(file, filename, cpd_count_arr, duration, dist_type):
     print("Predicting changepoint")
     df = pd.read_csv(file)
+    REAL_MEAN = 1.3347262513238476
+    df['eda_signal'] *= REAL_MEAN / df['eda_signal'].mean()
     df['PtID'] = filename
     df['cpd'] = 0
     freq = 4
@@ -123,6 +127,8 @@ def predict_change_properties_1(file, filename, cpd_details_folder, cpd_count, m
 
     #get the df
     df = pd.read_csv(file)
+    REAL_MEAN = 1.3347262513238476
+    df['eda_signal'] *= REAL_MEAN / df['eda_signal'].mean()
     df['PtID'] = filename
     #merge it with the df
     #df_final = pd.merge(df, cpd_details, right_on='CPD_Index', left_index=True, how='left')
@@ -171,6 +177,8 @@ def predict_change_properties(file, filename, cpd_details_folder,cpd_count, dura
 
     #get the df
     df = pd.read_csv(file)
+    REAL_MEAN = 1.3347262513238476
+    df['eda_signal'] *= REAL_MEAN / df['eda_signal'].mean()
     df['PtID'] = filename
     #df = df.rename(columns={'dateString': 'dates'})
     #df['dates'] = pd.to_datetime(df['dates'])

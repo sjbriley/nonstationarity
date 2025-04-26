@@ -35,6 +35,21 @@ def main():
             ])
 
         df = pd.DataFrame({"eda_signal": eda, "label": label})
+        """
+        >>> import pandas as pd, glob, numpy as np, json, pathlib, os
+        stress_vals = np.concatenate([pd.read_csv(f)['eda_signal']
+                                    for f in glob.glob('data/wesad/*/*_eda.csv')
+                                    if '_eda.csv' in f])
+        real_mean = stress_vals.mean()
+        print(real_mean) >>> stress_vals = np.concatenate([pd.read_csv(f)['eda_signal']
+        ...                               for f in glob.glob('data/wesad/*/*_eda.csv')
+        ...                               if '_eda.csv' in f])
+        >>> real_mean = stress_vals.mean()
+        >>> print(real_mean)
+        1.3347262513238476
+        """
+        REAL_MEAN = 1.3347262513238476
+        df['eda_signal'] *= REAL_MEAN / df['eda_signal'].mean()
         df.to_csv(f"{output_dir}/S{subj}_eda.csv", index=False)
 
 

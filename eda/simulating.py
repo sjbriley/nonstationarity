@@ -83,7 +83,8 @@ def predict_cpd_duration(file, mdl_dict,filename):
     window_size = 3 #10, 5seconds #15
     freq = 4
     window_size = window_size * freq
-    cfg_file = tsfel.load_json("features_simple.json")
+    # cfg_file = tsfel.load_json("features_simple.json")
+    cfg_file = tsfel.get_features_by_domain()
     i = window_size
     while i < len(df):
         X_train = pd.Series([])
@@ -91,8 +92,19 @@ def predict_cpd_duration(file, mdl_dict,filename):
         t2 = i - window_size
         #print(f"index number in this pt sample: {t2+1}:{i}")
         window = df[t2:i]['eda_signal'].values
+
+        X_train = tsfel.time_series_features_extractor(
+                    cfg_file,
+                    window,
+                    fs=freq,                 # freq = 4 earlier in the function
+                    verbose=0,
+                    n_jobs=0)
+
+        need_cols = mdl.feature_names_in_    # available in XGBoost ≥1.7
+        X_train = X_train.reindex(columns=need_cols, fill_value=0)
+
         #print(len(window))
-        X_train = tsfel.time_series_features_extractor(cfg_file, window, n_jobs = 15, verbose = 0)
+        # X_train = tsfel.time_series_features_extractor(cfg_file, window, n_jobs = 15, verbose = 0)
         #print_to_file(f"X_train: {X_train}")
         y_pred = mdl.predict(X_train)
         if(y_pred == 1):

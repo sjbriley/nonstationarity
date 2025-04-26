@@ -1,0 +1,2 @@
+window_size=5
+REAL_MEAN=1.3347262513238476

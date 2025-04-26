@@ -7,6 +7,11 @@ CHIL 2024.
 
 ## Replication
 
+/data/wesad_raw should contain all files
+all other directories under data/ can be removed
+all files under results/ and models/ can be removed
+
+
 ### Overview
 
 `/data/simulated` contains data generated with neurokit2 through simulate_raw_eda.py.
@@ -121,15 +126,15 @@ Augmented synthetic data
 MeanShift-Constant
 ```
 ./virtualenv/bin/python eda/classification.py \
-       sim_msc_WESAD \
+       sim_WESAD \
        data/simulated/eda_meanshift_constant/ \
        results/sim_msc/
 ```
 
 Mean+SDShift-Constant
 ```
-python eda/classification.py \
-       sim_msdc_WESAD \
+./virtualenv/bin/python eda/classification.py \
+       sim_WESAD \
        data/simulated/eda_meansdshift_constant/ \
        results/sim_msdc/
 ```
@@ -137,7 +142,7 @@ python eda/classification.py \
 MeanShift-Varying
 ```
 ./virtualenv/bin/python eda/classification.py \
-       sim_msv_WESAD \
+       sim_WESAD \
        data/simulated/eda_meanshift_varying/ \
        results/sim_msv/
 ```
@@ -145,10 +150,10 @@ MeanShift-Varying
 Mean+SDShift-Varying
 ```
 ./virtualenv/bin/python eda/classification.py \
-       sim_msdv_WESAD \
+       sim_WESAD \
        data/simulated/eda_meansdshift_varying/ \
        results/sim_msdv/
 ```
 
 ### Comparing against real data & baselines
-
+```./virtualenv/bin/python compare_results.py```

@@ -136,6 +136,7 @@ def main():
     data_folder = str(sys.argv[2])  #folder containing the patient files
     result_folder = str(sys.argv[3]) #folder to save the results files.
     freq = 4
+    # window_size = 5
     window_size = 10
     print(data_folder)
 

@@ -6,5 +6,7 @@ data/wesad_raw/
 data/WESAD_raw/
 virtualenv/
 .DS_Store
-*.txt*
 __pycache__/
+models/
+results/
+debug_*

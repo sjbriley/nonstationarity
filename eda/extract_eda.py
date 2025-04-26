@@ -66,7 +66,7 @@ def main():
 
         # convert to DataFrame with the expected column name
         eda = pd.DataFrame({'eda_signal': eda_4hz, 'label': lbl_4hz})
-
+        eda.loc[eda['label'] == 3, 'label'] = 1
         # Locate the EDA column
         # eda_col = next((c for c in df_all.columns if 'eda' in str(c).lower()), None)
 
