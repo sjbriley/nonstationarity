@@ -2,12 +2,19 @@ import os
 import pickle
 import pandas as pd
 import numpy as np
+import sys
 
 RAW_ROOT = 'data/wesad_raw'
-OUT_ROOT = 'data/wesad'
 
 
 def main():
+    sample_type = sys.argv[1]
+    if sample_type == 'chest':
+        output_dir = "data/chest/wesad"
+    else:
+        output_dir = "data/wrist/wesad"
+    os.makedirs(output_dir, exist_ok=True)
+
     for subj in os.listdir(RAW_ROOT):
         subj_dir = os.path.join(RAW_ROOT, subj)
         if not os.path.isdir(subj_dir):
@@ -17,66 +24,44 @@ def main():
         if not pkl_files:
             continue
         pkl_path = os.path.join(subj_dir, pkl_files[0])
+
         # load the pickled object
         with open(pkl_path, 'rb') as f:
             obj = pickle.load(f, encoding='latin1')
 
-        # Convert to DataFrame
-        if isinstance(obj, pd.DataFrame):
-            df_all = obj
-        elif isinstance(obj, dict):
-            # find first array-like value
-            arr = None
-            for v in obj.values():
-                if isinstance(v, (np.ndarray, list)):
-                    arr = np.array(v)
-                    break
-            if arr is None:
-                raise ValueError(f"No array in pickle for {subj}")
-            # ensure shape [samples, channels]
-            if arr.ndim == 2 and arr.shape[0] < arr.shape[1]:
-                arr = arr.T
-            df_all = pd.DataFrame(arr)
-        else:
-            arr = np.array(obj)
-            df_all = pd.DataFrame(arr)
+        # Expect a dict with nested wrist EDA under obj['signal']['wrist']['EDA']
+        if not isinstance(obj, dict):
+            raise ValueError(f"Expected pickle object to be dict, got {type(obj)}")
 
-        if isinstance(obj, dict) and 'EDA' in obj:
-            eda_4hz = np.asarray(obj['EDA'])
+        try:
+            if sample_type != 'chest':
+                eda_4hz = np.asarray(obj['signal']['wrist']['EDA']).flatten()
+            else:
+                eda_4hz = np.asarray(obj['signal']['chest']['EDA']).flatten()
+        except Exception as exc:
+            raise ValueError(f"Could not find EDA data: {exc}")
 
-        # 2.   Wrist CSV layout    (DataFrame → column named 'EDA')
-        elif isinstance(df_all, pd.DataFrame) and any(str(c).lower() == 'eda' for c in df_all.columns):
-            eda_4hz = df_all[[c for c in df_all.columns if str(c).lower() == 'eda'][0]].values.flatten()
-        # 3.   Otherwise we must have loaded the 700 Hz chest trace; down-sample 175:1
-        else:
-            # ensure 1-D array
-            flat = df_all.values.flatten()
-            eda_4hz = flat[::175]          # 700 Hz / 175 ≈ 4 Hz
+        try:
+            lbl_raw = np.asarray(obj['label']).astype(int).flatten()
+        except Exception:
+            raise ValueError("Could not find wrist label at obj['label']")
 
-        if isinstance(obj, dict) and 'label' in obj:
-            lbl_raw = np.asarray(obj['label']).astype(int)
-        elif isinstance(df_all, pd.DataFrame) and 'label' in df_all.columns:
-            lbl_raw = df_all['label'].values.astype(int)
-        else:
-            raise ValueError("‘label’ array not found in pickle")
+        # labels need to be downsized 700->4hz to match wrist data at 4hz
+        if sample_type != 'chest':
+            lbl_4hz = lbl_raw[::175]
 
-        lbl_4hz = lbl_raw[::175] if len(lbl_raw) > len(eda_4hz) else lbl_raw
-        if len(lbl_4hz) != len(eda_4hz):
-            raise ValueError("label/EDA length mismatch after down-sampling")
+        if len(eda_4hz) != len(lbl_4hz):
+            raise RuntimeError(f"Warning: lengths do not match; EDA={len(eda_4hz)}, label={len(lbl_4hz)}")
 
         # convert to DataFrame with the expected column name
         eda = pd.DataFrame({'eda_signal': eda_4hz, 'label': lbl_4hz})
-        eda.loc[eda['label'] == 3, 'label'] = 1
-        # Locate the EDA column
-        # eda_col = next((c for c in df_all.columns if 'eda' in str(c).lower()), None)
 
-        # if eda_col is None:
-        #     # fallback: assume 3rd channel
-        #     eda_col = df_all.columns[2] if df_all.shape[1] >= 3 else df_all.columns[0]
-        # eda = df_all[[eda_col]].rename(columns={eda_col: 'eda_signal'})
+        # Map original WESAD labels: 0=neutral, 1=stress, 2 (or 3)=amusement
+        # Collapse both neutral and amusement into baseline (0), stress remains 1
+        eda['label'] = eda['label'].apply(lambda x: 1 if x == 1 else 0)
 
         # Write out as data/wesad/S*/S*_eda.csv
-        out_dir = os.path.join(OUT_ROOT, subj)
+        out_dir = os.path.join(output_dir, subj)
         os.makedirs(out_dir, exist_ok=True)
         print(f'Writing to {os.path.join(out_dir, f"{subj}_eda.csv")}')
         eda.to_csv(os.path.join(out_dir, f"{subj}_eda.csv"), index=False)

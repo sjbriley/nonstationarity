@@ -8,3 +8,4 @@ matplotlib==3.10.1
 seaborn==0.13.2
 scipy==1.15.2
 tabulate==0.9.0
+trendet==0.7

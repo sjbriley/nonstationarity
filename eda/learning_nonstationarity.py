@@ -167,7 +167,7 @@ def build_cpd_model(X_train):
         precision_, recall_, acc, f1, cm, auroc, auprc = calculate_metrics(y_test, y_pred, y_prob)
         out_dir = "models/classifier_predictions/"
         os.makedirs(out_dir, exist_ok=True)
-        pd.DataFrame({'y_actual': y_test, 'y_pred': y_pred, 'y_prob': y_prob}).to_csv(f"{out_dir}/{id}.csv")
+        pd.DataFrame({'y_actual': y_test, 'y_pred': y_pred, 'y_prob': y_prob}).to_csv(f"{out_dir}/{id}.csv", index=False)
         print_to_file(f"ID: {id}. p|r|acc|f1|cm: {precision_, recall_, acc, f1, cm.ravel()}") #TN, FP,FN,TP
         print_to_file(f"AUROC: {auroc} | AUPRC: {auprc}")
         conf = metrics.confusion_matrix(y_test, y_pred).ravel()
@@ -259,7 +259,7 @@ def main():
         #pt_sample.set_index("dates", inplace=True)
 
         print_to_file("Get the change point and duration")
-        trends = eda_utils.identify_df_trends(pt_sample, "eda_signal", frequency, window_size)
+        trends = eda_utils.identify_df_trends(pt_sample, "eda_signal", window_size)
         #result, trends = cpd_utils.large_missing_intervals(trends, 120) #no need since there is no timestamp
         pt_data = eda_utils.annotate_cp_duration(pt_sample, trends) #annotate the data with the duration and cp
 
@@ -300,7 +300,7 @@ def main():
             file_name = f"{learning_Ids[i]}.csv"
             file_path = os.path.join(annonated_files,file_name)
             os.makedirs(annonated_files, exist_ok=True)
-            pt_data.to_csv(file_path)
+            pt_data.to_csv(file_path, index=False)
 
             #append the patient into a big df
             #print(pt_data.head(5))
@@ -319,7 +319,7 @@ def main():
             file_path = os.path.join(annonated_files,file_name)
             os.makedirs(annonated_files, exist_ok=True)
             X_train['PID'] = learning_Ids[i]
-            X_train.to_csv(file_path)
+            X_train.to_csv(file_path, index=False)
 
             #y_train = data['cpd']
             X_train_total = pd.concat([X_train_total, X_train], axis=0).reset_index(drop=True)
@@ -336,7 +336,7 @@ def main():
     #build classifier model for change point detection
     X_train_total['y'] = y_train_total #combine into one df
     os.makedirs("models", exist_ok=True)
-    X_train_total.to_csv(f"models/{DATASET}_classifier_data.csv")
+    X_train_total.to_csv(f"models/{DATASET}_classifier_data.csv", index=False)
     print_to_file(all_pt.tail(5))
     #'''#--------------------------------------------------------------------comment just to run classifier
     X_train_total = pd.read_csv(f"models/{DATASET}_classifier_data.csv")
@@ -358,7 +358,7 @@ def main():
     bkps_df['before_checking'] = bkps_before
     bkps_df['after_checking'] = bkps_after
 
-    bkps_df.to_csv(bkps_count_file)
+    bkps_df.to_csv(bkps_count_file, index=False)
     print_to_file(f"{now}-----------------------------END OF THE RUN- LEARNING.PY")
 
 

@@ -57,44 +57,46 @@ def extract_features(df_patient, sampling_freq, window_size):
     return feature_dataset
 
 def generate_features(data_name, data_folder, freq, window_size):
-    if (data_name == 'WESAD'):
-        classification_ids = pd.read_csv(f'data/{data_name}_classification_ids.csv')
+    if data_name in ('WESAD', 'WESAD_chest'):
+        classification_ids = pd.read_csv(f'data/WESAD_classification_ids.csv')
         ids = classification_ids['ID'].tolist() #['S10', 'S11']
         for patient_id in ids:
             print(f'Extracting features for Patient {patient_id}')
             df = pd.read_csv(f'{data_folder}/{patient_id}/{patient_id}_eda.csv')
             features_df = extract_features(df, freq, window_size)
-            features_df.to_csv(f'{data_folder}/{patient_id}/{patient_id}_eda_features.csv')
+            features_df.to_csv(f'{data_folder}/{patient_id}/{patient_id}_eda_features.csv', index=False)
             print(len(features_df))
-    elif(data_name == 'sim_WESAD' or  data_name == 'sim_aug_WESAD'):
+    elif(data_name in ('sim_WESAD', 'sim_aug_WESAD', 'sim_WESAD_chest', 'sim_aug_WESAD_chest')):
         ids = [os.path.splitext(file)[0].split('_')[0] for file in os.listdir(data_folder) if file.endswith('_eda.csv')]
         for patient_id in ids:
             print(f'Extracting features for Patient {patient_id}')
             df = pd.read_csv(f'{data_folder}/{patient_id}_eda.csv')
             features_df = extract_features(df, freq, window_size)
-            features_df.to_csv(f'{data_folder}/{patient_id}_eda_features.csv')
+            features_df.to_csv(f'{data_folder}/{patient_id}_eda_features.csv', index=False)
             print(len(features_df))
     print("Done generating features")
 
 def load_data(data_name, data_folder, ids):
     all_features = pd.DataFrame()
-    if (data_name == 'WESAD'):
+    if (data_name in ('WESAD', 'WESAD_chest')):
         for id in ids:
             features = pd.read_csv(f'{data_folder}/{id}/{id}_eda_features.csv')
-            all_features = all_features.append(features, ignore_index=True)
-    elif(data_name == 'sim_WESAD' or data_name == 'sim_aug_WESAD'):
+            all_features = pd.concat([all_features, features], ignore_index=True)
+    elif(data_name in ('sim_WESAD', 'sim_aug_WESAD', 'sim_WESAD_chest', 'sim_aug_WESAD_chest')):
         for id in ids:
             features = pd.read_csv(f'{data_folder}/{id}_eda_features.csv')
-            all_features = all_features.append(features, ignore_index=True)
+            all_features = pd.concat([all_features, features], ignore_index=True)
     return all_features
 
 
 def model_training(data_name, mdl, train_data, test_data):
     #extract only labels 1 and 2 for real data ------0 1 for sim data
     print(train_data.head(5))
-    if (data_name=="WESAD"):
-        train_data = train_data[(train_data['label'] == 1) | (train_data['label'] == 2)]
-        test_data = test_data[(test_data['label'] == 1) | (test_data['label'] == 2)]
+    if (data_name in ("WESAD", "WESAD_chest")):
+        train_data.loc[train_data['label'] == 2, 'label'] = 0
+        test_data .loc[test_data ['label'] == 2, 'label'] = 0
+        train_data = train_data[(train_data['label'] == 0) | (train_data['label'] == 1)]
+        test_data = test_data [(test_data ['label'] == 0) | (test_data ['label'] == 1)]
     else:
         train_data = train_data[(train_data['label'] == 0) | (train_data['label'] == 1)]
         test_data = test_data[(test_data['label'] == 0) | (test_data['label'] == 1)]
@@ -146,9 +148,9 @@ def main():
     mdls = ['LR', 'SVM', 'RF', 'KNN'] #['LR'] #
 
     #classification
-    if (data_name == 'WESAD'):
-        ids = pd.read_csv(f'data/{data_name}_classification_ids.csv')['ID'].tolist()
-    elif(data_name == 'sim_WESAD' or data_name == 'sim_aug_WESAD'):
+    if (data_name in ('WESAD', 'WESAD_chest')):
+        ids = pd.read_csv(f'data/WESAD_classification_ids.csv')['ID'].tolist()
+    elif(data_name in ('sim_WESAD', 'sim_aug_WESAD', 'sim_WESAD_chest', 'sim_aug_WESAD_chest')):
         ids = [os.path.splitext(file)[0].split('_')[0]  for file in os.listdir(data_folder) if file.endswith('_eda.csv')]
     print(ids)
     for mdl in mdls:
@@ -175,7 +177,7 @@ def main():
         results_df = results_df[['Patient_ID', 'Accuracy', 'Precision', 'Recall', 'F1_Score','True_Negative',
                                     'False_Positive','False_Negative','True_Positive']]
         os.makedirs(result_folder, exist_ok=True)
-        results_df.to_csv(f'{result_folder}/{mdl}.csv')
+        results_df.to_csv(f'{result_folder}/{mdl}.csv', index=False)
         print('Classification Complete!')
 
 

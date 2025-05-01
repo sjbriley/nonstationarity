@@ -10,3 +10,7 @@ __pycache__/
 models/
 results/
 debug_*
+data/wesad_chest/
+*copy*
+data/wrist
+data/chest

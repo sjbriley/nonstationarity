@@ -12,6 +12,12 @@ all other directories under data/ can be removed
 all files under results/ and models/ can be removed
 
 
+### Automated
+
+The script `run_full_pipeline.sh` automates all below scripts and generates results. The only requirements are to have XGBoost installed and virtualenv with dependencies resolved.
+
+`run_full_pipeline_chest_extension.sh` is our extension to analyze the chest recorded data.
+
 ### Overview
 
 `/data/simulated` contains data generated with neurokit2 through simulate_raw_eda.py.

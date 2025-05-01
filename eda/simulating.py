@@ -147,7 +147,7 @@ def predict_change_properties(file, mdl_dict, filename, cpd_details_folder):
     file_name = f"{filename}.csv"
     file_path = os.path.join(cpd_details_folder,file_name)
     os.makedirs(cpd_details_folder, exist_ok=True)
-    cpd_details.to_csv(file_path)
+    cpd_details.to_csv(file_path, index=False)
 
     #get the df
     df = pd.read_csv(file)
@@ -171,65 +171,6 @@ def insert_one_value(df, index, value,col_name):
     df.at[index, col_name] = value
     return df
 
-def modify_values_1(df, threshold):
-    min_value = df['eda_signal'].min()
-    max_value = df['eda_signal'].max()
-    print(f"Min value: {min_value}. Max value: {max_value}")
-    df['eda_signal_new'] = df['eda_signal']
-    df['mean_change_new'] = df['mean_change']
-    df['std_change_new'] = df['std_change']
-    df_new = pd.DataFrame()
-
-    bkps = df[df['cpd'] == 1].index #list of the breakpoints index
-    print(df[df['cpd'] == 1])
-    print(f"{len(bkps)} changepoints: {bkps}")
-    for i in range(len(bkps)):
-        print(f'-----------------------Modifying values: index: {i}: bkp_index: {bkps[i]}')
-        #print(len(df))
-        #print_to_file(df.index)
-        #print(df.iloc[bkps[i]])
-        change_type =  df.loc[bkps[i], 'type_of_change'] #df['type_of_change'].iloc[bkps[i]]
-        change_mu = df['mean_change'].iloc[bkps[i]]
-        change_sigma = df['std_change'].iloc[bkps[i]]
-        change_duration = df['duration'].iloc[bkps[i]]
-        print(f'Sample change in mean: {change_mu}. Sample change in std: {change_sigma}. Duration: {change_duration}')
-
-        start_gradual = bkps[i] #df['dates'].iloc[bkps[i]] #index of the start
-        end_gradual = start_gradual + int(change_duration * 4) #start_gradual + timedelta(minutes=int(change_duration))
-        print_to_file(f"Start_gradual:{start_gradual} || End Gradual:{end_gradual}")
-        print(f"Start_gradual:{start_gradual} || End Gradual:{end_gradual}")
-
-        if(len(bkps) == 1):
-            pre_bkp = df[0:bkps[i]]
-            post_bkp = df[bkps[i]:len(df)]
-        elif(i == 0):
-            pre_bkp = df[0:bkps[i]]
-            post_bkp = df[bkps[i]:bkps[i+1]]
-        elif(i == len(bkps)-1):
-            pre_bkp = df[bkps[i-1]:bkps[i]]
-            post_bkp = df[bkps[i]:len(df)]
-        else:
-            pre_bkp = df[bkps[i-1]:bkps[i]]
-            post_bkp = df[bkps[i]:bkps[i+1]]
-        previous_value = df.at[bkps[i]-1, 'eda_signal_new']
-        pre_bkp_mean = mean(pre_bkp['eda_signal_new'])
-        pre_sigma = np.std(pre_bkp['eda_signal_new'])
-        post_bkp_mean = mean(post_bkp['eda_signal_new'])
-        post_sigma = np.std(post_bkp['eda_signal_new'])
-        post_bkp_new,post_ckp_after_gradual_new,mean_change_list = modify_property(change_type,
-                                                                        post_bkp['eda_signal_new'].tolist(),
-                                                                    change_mu, change_sigma,
-                                        change_duration, post_bkp.index.tolist(), pre_bkp_mean, pre_sigma,
-                                        min_value, max_value, previous_value, threshold)
-
-        print(f'Pre chkp mean:{pre_bkp_mean} || Old postchkp mean: {post_bkp_mean} || New postchkp mean:{mean(post_ckp_after_gradual_new)} || Previous value: {previous_value}.')
-
-        if (len(post_bkp_new) != 0):
-            df = insert_values(df, post_bkp.index, post_bkp_new,'eda_signal_new')
-            df = insert_values(df, post_bkp.index, mean_change_list,'mean_change_new')
-    df_new = df_new.append(df)
-    print(f"total df length: {len(df_new)}")
-    return df_new
 
 def modify_values(df, threshold):
     min_value = df['eda_signal'].min()
@@ -301,6 +242,7 @@ def get_new_std(sigma1, sigma2):
     if (sigma2 > (1.5*sigma1)):
         sigma2 = 1.5*sigma1
     return sigma2
+
 def modify_property(change_type, post_bkp, change_properties, pre_bkp, threshold_values, previous_value):
     change_mu = change_properties[0]
     change_sigma = change_properties[1]
@@ -335,6 +277,7 @@ def modify_property(change_type, post_bkp, change_properties, pre_bkp, threshold
         post_ckp_new_original = gradual_mean_change(post_ckp_arr.tolist(), duration_array,mu1,mu2,duration)
     elif(change_type=='mean'):
         post_ckp_new_original = gradual_mean_change(post_ckp, duration_array, mu1, mu2, duration)
+        sigma2_new = sigma2
     elif(change_type=='std'):
         sigma2 = pre_sigma + change_sigma
         sigma2_new = get_new_std(sigma1, sigma2)
@@ -389,7 +332,7 @@ def main():
         #output_path = output_folder + filename2
         output_path = os.path.join(output_folder,filename2)
         os.makedirs(output_folder, exist_ok=True)
-        sim_data.to_csv(output_path)
+        sim_data.to_csv(output_path, index=False)
     print_to_file("Done processing all files! Yipee!!!!")
 
 
