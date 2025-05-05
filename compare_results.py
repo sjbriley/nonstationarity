@@ -3,6 +3,14 @@ import pandas as pd
 import pathlib
 import sys
 
+from logging.config import dictConfig
+import json
+with open('logging.json', 'r') as read_file:
+    contents = json.load(read_file)
+dictConfig(contents)
+import logging
+LOGGER = logging.getLogger()
+
 def main():
 
     RESULT_ROOT = str(sys.argv[1])
@@ -18,6 +26,8 @@ def main():
             if not csv.exists():
                 continue
             df = pd.read_csv(csv)
+            # drop any degenerate folds
+            df = df.dropna(subset=['F1_Score', 'Accuracy'])
             rows.append({
                 "Dataset": run_name,
                 "Model":   mdl,
@@ -37,16 +47,16 @@ def main():
                                    columns="Model",
                                    values="Mean_Acc").round(3)
 
-    print("\n=== Mean F1 by model ===")
-    print(summary_f1.to_markdown())
+    LOGGER.debug("\n=== Mean F1 by model ===")
+    LOGGER.debug(f'\n{summary_f1.to_markdown()}')
 
-    print("\n=== Mean Accuracy by model ===")
-    print(summary_acc.to_markdown())
+    LOGGER.debug("\n=== Mean Accuracy by model ===")
+    LOGGER.debug(f'\n{summary_acc.to_markdown()}')
 
     # Combine Accuracy and F1 into one table
     merged = summary_acc.add_suffix('_Acc').join(summary_f1.add_suffix('_F1'))
-    print("\n=== Combined Accuracy and F1 by model ===")
-    print(merged.to_markdown())
+    LOGGER.debug("\n=== Combined Accuracy and F1 by model ===")
+    LOGGER.debug(f'\n{merged.to_markdown()}')
     merged.to_csv("results/combined_accuracy_f1_by_model.csv")
 
     # Write both tables to CSV for later inspection

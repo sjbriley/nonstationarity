@@ -14,6 +14,14 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_sc
 import warnings
 import eda_utils
 
+import logging
+from logging.config import dictConfig
+import json
+with open('logging.json', 'r') as read_file:
+    contents = json.load(read_file)
+dictConfig(contents)
+LOGGER = logging.getLogger()
+
 # Ignore all warnings
 warnings.filterwarnings("ignore")
 
@@ -38,9 +46,15 @@ def extract_features(df_patient, sampling_freq, window_size):
     feature_vectors = []
     labels = []
     # Iterate through the data with the sliding window
-    for i in range(0, len(df_patient['eda_signal']), window_length):
+    # if 'eda_signal_new_original' in df_patient:
+    #     key = 'eda_signal_new_original'
+    # else:
+    #     key = 'eda_signal'
+    key = 'eda_signal'
+
+    for i in range(0, len(df_patient[key]), window_length):
         end_index = i + window_length
-        window_data = df_patient['eda_signal'].iloc[i:end_index]
+        window_data = df_patient[key].iloc[i:end_index]
         lbl_data = df_patient['label'].iloc[i:end_index]
 
         # Check if the window has sufficient data
@@ -54,6 +68,7 @@ def extract_features(df_patient, sampling_freq, window_size):
     # Create a new DataFrame for the feature dataset
     feature_dataset = pd.DataFrame(feature_vectors)
     feature_dataset['label'] = labels
+    LOGGER.debug("Window labels distribution: %s", pd.Series(labels).value_counts().to_dict())
     return feature_dataset
 
 def generate_features(data_name, data_folder, freq, window_size):
@@ -61,20 +76,20 @@ def generate_features(data_name, data_folder, freq, window_size):
         classification_ids = pd.read_csv(f'data/WESAD_classification_ids.csv')
         ids = classification_ids['ID'].tolist() #['S10', 'S11']
         for patient_id in ids:
-            print(f'Extracting features for Patient {patient_id}')
+            LOGGER.debug(f'Extracting features for Patient {patient_id}')
             df = pd.read_csv(f'{data_folder}/{patient_id}/{patient_id}_eda.csv')
             features_df = extract_features(df, freq, window_size)
             features_df.to_csv(f'{data_folder}/{patient_id}/{patient_id}_eda_features.csv', index=False)
-            print(len(features_df))
+            LOGGER.debug(len(features_df))
     elif(data_name in ('sim_WESAD', 'sim_aug_WESAD', 'sim_WESAD_chest', 'sim_aug_WESAD_chest')):
         ids = [os.path.splitext(file)[0].split('_')[0] for file in os.listdir(data_folder) if file.endswith('_eda.csv')]
         for patient_id in ids:
-            print(f'Extracting features for Patient {patient_id}')
+            LOGGER.debug(f'Extracting features for Patient {patient_id}')
             df = pd.read_csv(f'{data_folder}/{patient_id}_eda.csv')
             features_df = extract_features(df, freq, window_size)
             features_df.to_csv(f'{data_folder}/{patient_id}_eda_features.csv', index=False)
-            print(len(features_df))
-    print("Done generating features")
+            LOGGER.debug(len(features_df))
+    LOGGER.debug("Done generating features")
 
 def load_data(data_name, data_folder, ids):
     all_features = pd.DataFrame()
@@ -91,30 +106,77 @@ def load_data(data_name, data_folder, ids):
 
 def model_training(data_name, mdl, train_data, test_data):
     #extract only labels 1 and 2 for real data ------0 1 for sim data
-    print(train_data.head(5))
-    if (data_name in ("WESAD", "WESAD_chest")):
-        train_data.loc[train_data['label'] == 2, 'label'] = 0
-        test_data .loc[test_data ['label'] == 2, 'label'] = 0
-        train_data = train_data[(train_data['label'] == 0) | (train_data['label'] == 1)]
-        test_data = test_data [(test_data ['label'] == 0) | (test_data ['label'] == 1)]
-    else:
-        train_data = train_data[(train_data['label'] == 0) | (train_data['label'] == 1)]
-        test_data = test_data[(test_data['label'] == 0) | (test_data['label'] == 1)]
-    X_train = train_data.iloc[:, 1:-1]
-    print(X_train.head(10))
-    y_train = train_data.iloc[:, -1]
-    #print(y_train.head(10))
-    X_test = test_data.iloc[:, 1:-1]
-    #print(X_train.head(10))
-    y_test = test_data.iloc[:, -1]
+    LOGGER.debug(f'train_data.head(5)={train_data.head(5)}')
+    # if data_name in ("WESAD", "WESAD_chest"):
+    # Use labels as-is; just filter to keep valid binary labels
+    # Keep only valid binary labels
+    # if data_name.startswith("sim_"):
+    #     train_data['label'] = train_data['label'].map({1:0, 2:1})
+    #     test_data ['label']  = test_data ['label'].map({1:0, 2:1})
+
+    train_data = train_data[train_data['label'].isin([0,1])]
+    test_data  = test_data[test_data['label'].isin([0,1])]
+    # Log label distributions for debugging
+    LOGGER.debug("Train label distribution: %s", train_data['label'].value_counts().to_dict())
+    LOGGER.debug("Test  label distribution: %s", test_data ['label'].value_counts().to_dict())
+
+    # Ensure both classes are present
+    if train_data['label'].nunique() < 2:
+        LOGGER.warning("Only one class present in training data for fold: %s", train_data['label'].unique())
+        # Return NaNs to skip this fold
+        return {
+            'Accuracy':       np.nan,
+            'Precision':      np.nan,
+            'Recall':         np.nan,
+            'F1_Score':       np.nan,
+            'True_Negative':  np.nan,
+            'False_Positive': np.nan,
+            'False_Negative': np.nan,
+            'True_Positive':  np.nan
+        }
+    # else:
+    #     train_data = train_data[(train_data['label'] == 1) | (train_data['label'] == 2)]
+    #     test_data = test_data[(test_data['label'] == 1) | (test_data['label'] == 2)]
+
+    # X_train = train_data.iloc[:, 1:-1]
+    X_train = train_data.drop(columns=['label'])
+    feature_cols = X_train.columns.tolist()
+    LOGGER.debug('X_train.head(10):\n%s', X_train.head(10))
+
+    y_train = train_data['label']
+    LOGGER.debug('y_train.head(10):\n%s', y_train.head(10))
+
+    # X_test = test_data.iloc[:, 1:-1]
+    X_test = test_data.drop(columns=['label'])
+    LOGGER.debug('X_test.head(10:\n%s', X_test.head(10))
+
+    # y_test = test_data.iloc[:, -1]
+    y_test = test_data['label']
+    LOGGER.debug('y_test.head(10:\n%s', y_test.head(10))
+
+    from sklearn.preprocessing import StandardScaler
+    scaler = StandardScaler()
+    X_train_scaled = scaler.fit_transform(X_train)
+    X_test_scaled  = scaler.transform(X_test)
+
     if (mdl == 'LR'):
-        model = LogisticRegression()
+        model = LogisticRegression(class_weight='balanced')
     elif mdl == 'SVM':
-        model = SVC(kernel='rbf')
+        model = SVC(kernel='rbf', class_weight='balanced')
     elif mdl == 'RF':
-        model = RandomForestClassifier(n_estimators=50, min_samples_split=5)
+        model = RandomForestClassifier(n_estimators=50, min_samples_split=5, class_weight='balanced')
     elif mdl == 'KNN':
         model = KNeighborsClassifier(n_neighbors=100)
+
+    from sklearn.impute import SimpleImputer
+    # 1) fit the imputer on your train matrix
+    imp = SimpleImputer(strategy='mean')
+    X_train_imputed = imp.fit_transform(X_train_scaled)
+    X_test_imputed  = imp.transform(X_test_scaled)
+
+    # 2) (optional) wrap back into a DataFrame for logging/debugging
+    X_train = pd.DataFrame(X_train_imputed, columns=feature_cols)
+    X_test  = pd.DataFrame(X_test_imputed,  columns=feature_cols)
 
     model.fit(X_train, y_train)
     y_pred = model.predict(X_test)
@@ -140,7 +202,7 @@ def main():
     freq = 4
     # window_size = 5
     window_size = 10
-    print(data_folder)
+    LOGGER.debug(data_folder)
 
     #generate features
     generate_features(data_name, data_folder, freq, window_size)  #dont run this if you have already generated the features
@@ -152,16 +214,16 @@ def main():
         ids = pd.read_csv(f'data/WESAD_classification_ids.csv')['ID'].tolist()
     elif(data_name in ('sim_WESAD', 'sim_aug_WESAD', 'sim_WESAD_chest', 'sim_aug_WESAD_chest')):
         ids = [os.path.splitext(file)[0].split('_')[0]  for file in os.listdir(data_folder) if file.endswith('_eda.csv')]
-    print(ids)
+    LOGGER.debug(ids)
     for mdl in mdls:
         eval_lst = []
         pt_lst = []
-        print(f"Working on {mdl} model")
+        LOGGER.debug(f"Working on {mdl} model")
         for id in ids:
-            print(f"Testing patient {id}")
+            LOGGER.debug(f"Testing patient {id}")
             train_ids = [id_ for id_ in ids if id_ != id]
             test_id = [id]
-            #print(f'{train_ids} | {test_id}')
+            #LOGGER.debug(f'{train_ids} | {test_id}')
 
             train_data = load_data(data_name, data_folder, train_ids)
             test_data = load_data(data_name, data_folder, test_id)
@@ -178,7 +240,7 @@ def main():
                                     'False_Positive','False_Negative','True_Positive']]
         os.makedirs(result_folder, exist_ok=True)
         results_df.to_csv(f'{result_folder}/{mdl}.csv', index=False)
-        print('Classification Complete!')
+        LOGGER.debug('Classification Complete!')
 
 
 
@@ -186,4 +248,4 @@ def main():
 if __name__ == "__main__":
     start_time = time.time()
     main()
-    print("--- %s seconds ---" % (time.time() - start_time))
+    LOGGER.debug("--- %s seconds ---" % (time.time() - start_time))

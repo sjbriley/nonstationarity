@@ -19,6 +19,14 @@ from datetime import datetime
 import string
 warnings.filterwarnings("ignore")
 
+import logging
+from logging.config import dictConfig
+import json
+with open('logging.json', 'r') as read_file:
+    contents = json.load(read_file)
+dictConfig(contents)
+LOGGER = logging.getLogger()
+
 
 def get_dist(data, *_unused, **_kw_unused):
     """
@@ -184,12 +192,12 @@ def plot_changepoints(data, start_date, end_date, ptID, col_name):
 
     #get the breakpoints index from the data
     breakpoints = data_small[data_small[col_name] == 1].index.tolist()
-    print(breakpoints)
+    LOGGER.debug(breakpoints)
     breakpoints = data_small[data_small[col_name] == 1]['dates'].tolist()
     #for i in range (len(breakpoints)-1):
     for i in (breakpoints):
         #changepoint = data_small.iloc[breakpoints[i]]['dates']
-        print(i)
+        LOGGER.debug(i)
         #changepoint = data_small.iloc[i]['dates']
         plt.axvline(x = i, color="red", linestyle="--", label='changepoint')
     plt.title(f"Patient {ptID} from {start_date} to {end_date}.")
@@ -217,7 +225,7 @@ def plot_cpd(data, start_date, end_date, ptID, col_name, show_ckp=False):
     #get the breakpoints index from the data
     if(show_ckp == True):
         breakpoints = data_small[data_small[col_name] == 1].index.tolist()
-        print(breakpoints)
+        LOGGER.debug(breakpoints)
         #for i in range (len(breakpoints)-1):
         for i in (breakpoints):
             #changepoint = data_small.iloc[breakpoints[i]]['dates']
@@ -280,9 +288,9 @@ def get_features(df, *_args):
 def check_sig_diff(x, y):
     sig_diff = False
     if (len(x) > 0 and len(y) > 0):
-        #print("YESS diff dey")
+        #LOGGER.debug("YESS diff dey")
         stat, p_value = mannwhitneyu(x, y)
-        #print(p_value)
+        #LOGGER.debug(p_value)
         alpha = 0.05
         if(p_value < alpha):
             sig_diff = True #reject H0: x and y are the same
@@ -290,7 +298,7 @@ def check_sig_diff(x, y):
 
 def draw_sample(mu, sigma):
     s = np.random.normal(mu, sigma, 1)
-    #print(f"Sample:{s}")
+    #LOGGER.debug(f"Sample:{s}")
     return s
 
 def save_to_pkl(filepath, file_to_save):

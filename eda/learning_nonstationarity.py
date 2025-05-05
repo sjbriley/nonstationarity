@@ -26,19 +26,19 @@ import warnings
 
 warnings.filterwarnings("ignore")
 
+from logging.config import dictConfig
+import json
+with open('logging.json', 'r') as read_file:
+    contents = json.load(read_file)
+dictConfig(contents)
+LOGGER = logging.getLogger()
 
-def print_to_file(statement):
-    file = f'debug_{DATASET}_3secs_021124.txt'
-
-    logging.basicConfig(filename=file, level=logging.DEBUG, format='')
-
-    logging.debug(statement)
 
 def check_for_significance(pt_sample):
     remove_ckp_index = []
     bkps = pt_sample[pt_sample['cpd'] == 1].index #list of the breakpoints index
     for i in range(len(bkps)):
-        #print(f'-------------------------------bkp: {i}: index: {bkps[i]}')
+        #LOGGER.debug(f'-------------------------------bkp: {i}: index: {bkps[i]}')
         if(i == 0):
             pre_bkp = pt_sample[0:bkps[i]]
             post_bkp = pt_sample[bkps[i]:bkps[i+1]]
@@ -50,7 +50,7 @@ def check_for_significance(pt_sample):
             post_bkp = pt_sample[bkps[i]:bkps[i+1]]
 
         sig_diff = eda_utils.check_sig_diff(pre_bkp['eda_signal'],post_bkp['eda_signal'])
-        #print(f'{pre_mean}:{post_mean}:{sig_diff}')
+        #LOGGER.debug(f'{pre_mean}:{post_mean}:{sig_diff}')
         if (sig_diff == False):
             remove_ckp_index.append(bkps[i])
 
@@ -59,8 +59,8 @@ def check_for_significance(pt_sample):
 
     bkps_after = pt_sample[pt_sample['cpd'] == 1].index
 
-    print(f"Number of bkps Before: {len(bkps)}: After:{len(bkps_after)}. Percentage dropped: {((len(bkps)-len(bkps_after))/len(bkps))*100}")
-    print(f"Class label Distribution \n {pt_sample['cpd'].value_counts()} \n {pt_sample['cpd'].value_counts(normalize=True)}")
+    LOGGER.debug(f"Number of bkps Before: {len(bkps)}: After:{len(bkps_after)}. Percentage dropped: {((len(bkps)-len(bkps_after))/len(bkps))*100}")
+    LOGGER.debug(f"Class label Distribution \n {pt_sample['cpd'].value_counts()} \n {pt_sample['cpd'].value_counts(normalize=True)}")
     return pt_sample, len(bkps), len(bkps_after)
 
 def type_of_change(pt_sample):
@@ -72,7 +72,7 @@ def type_of_change(pt_sample):
     pt_sample['std_change'] = np.nan
     pt_sample['type_of_change'] = np.nan
     for i in range(len(bkps)):
-        #print_to_file(f'-------------------------------bkp: {i}: index: {bkps[i]}')
+        #LOGGER.debug(f'-------------------------------bkp: {i}: index: {bkps[i]}')
         if(i == 0):
             pre_bkp = pt_sample[0:bkps[i]]
             post_bkp = pt_sample[bkps[i]:bkps[i+1]]
@@ -87,12 +87,12 @@ def type_of_change(pt_sample):
 
         diff_mean = post_mean - pre_mean
         diff_std = np.std(post_bkp['eda_signal']) -  np.std(pre_bkp['eda_signal'])
-        #print(f'Diff Mean={diff_mean}: Diff Std={diff_std}')
-        #print_to_file(f'Diff Mean={diff_mean}: Diff Std={diff_std}')
+        #LOGGER.debug(f'Diff Mean={diff_mean}: Diff Std={diff_std}')
+        #LOGGER.debug(f'Diff Mean={diff_mean}: Diff Std={diff_std}')
 
         #if (((diff_mean > 0.5) or (diff_mean < -0.5)) and ((diff_std > 0.5) or (diff_std < -0.5))):
         if (((diff_mean > 0) or (diff_mean < 0)) and ((diff_std > 0) or (diff_std < 0))):
-            #print_to_file("A change in both")
+            #LOGGER.debug("A change in both")
             type_of_change.append(3) #it's a change in both
             means_list.append(diff_mean)
             std_list.append(diff_std)
@@ -100,13 +100,13 @@ def type_of_change(pt_sample):
             pt_sample.at[bkps[i],'mean_change']= diff_mean
             pt_sample.at[bkps[i],'std_change']= diff_std
         elif ((diff_mean > 0) or (diff_mean < 0)):
-            #print_to_file("A change in mean")
+            #LOGGER.debug("A change in mean")
             type_of_change.append(1) # it's a change in mean
             means_list.append(diff_mean)
             pt_sample.at[bkps[i],'type_of_change']='mean'
             pt_sample.at[bkps[i],'mean_change']= diff_mean
         elif ((diff_std > 0) or (diff_std < 0)):
-            #print_to_file("A change in std")
+            #LOGGER.debug("A change in std")
             type_of_change.append(2)
             std_list.append(diff_std)
             pt_sample.at[bkps[i],'type_of_change']='std'
@@ -130,14 +130,14 @@ def calculate_metrics(y_actual, y_pred, y_prob):
 
 
 def build_cpd_model(X_train):
-    print("In building classifier method")
+    LOGGER.debug("In building classifier method")
     ids = X_train['PID'].unique()
-    print(X_train.head(10))
+    LOGGER.debug('X_train.head(10) = %s', X_train.head(10))
     counter = Counter(X_train['y'])
-    print(f"count of 0: {counter[0]}, count of 1: {counter[1]}")
+    LOGGER.debug(f"count of 0: {counter[0]}, count of 1: {counter[1]}")
     # estimate scale_pos_weight value
     estimate = counter[0] / counter[1]
-    print('Estimate: %.3f' % estimate)
+    LOGGER.debug('Estimate: %.3f' % estimate)
     accuracy = []
     f1score = []
     precision = []
@@ -154,25 +154,25 @@ def build_cpd_model(X_train):
         X_test = test_data.drop(columns=['y', 'PID'])
         y_test = test_data['y']
 
-        print_to_file(f"0s: {pd.Series(y_test).value_counts()[0]}, 1s: {pd.Series(y_test).value_counts()[1]}")
+        LOGGER.debug(f"0s: {pd.Series(y_test).value_counts()[0]}, 1s: {pd.Series(y_test).value_counts()[1]}")
             # Perform stratified undersampling on the training set
         #X_train_undersampled, y_train_undersampled = stratified_undersampling(X_train_split, y_train)
-        #print_to_file(f"X_train before undersampling: {len(X_train_split)}. After: {len(X_train_undersampled)}")
+        #LOGGER.debug(f"X_train before undersampling: {len(X_train_split)}. After: {len(X_train_undersampled)}")
         model.fit(X_train_split, y_train)
 
         y_pred = model.predict(X_test)
         y_prob = model.predict_proba(X_test)[:,1]
-        print_to_file(f"Predicted prob: {y_prob}")
+        LOGGER.debug(f"Predicted prob: {y_prob}")
         #metrics_report = classification_report(y_test, y_pred, output_dict=True)
         precision_, recall_, acc, f1, cm, auroc, auprc = calculate_metrics(y_test, y_pred, y_prob)
         out_dir = "models/classifier_predictions/"
         os.makedirs(out_dir, exist_ok=True)
         pd.DataFrame({'y_actual': y_test, 'y_pred': y_pred, 'y_prob': y_prob}).to_csv(f"{out_dir}/{id}.csv", index=False)
-        print_to_file(f"ID: {id}. p|r|acc|f1|cm: {precision_, recall_, acc, f1, cm.ravel()}") #TN, FP,FN,TP
-        print_to_file(f"AUROC: {auroc} | AUPRC: {auprc}")
+        LOGGER.debug(f"ID: {id}. p|r|acc|f1|cm: {precision_, recall_, acc, f1, cm.ravel()}") #TN, FP,FN,TP
+        LOGGER.debug(f"AUROC: {auroc} | AUPRC: {auprc}")
         conf = metrics.confusion_matrix(y_test, y_pred).ravel()
-        print(f"XGB Conf matrix: {conf}") #tn, fp, fn, tp
-        print_to_file(f"XGB Conf matrix: {conf}") #tn, fp, fn, tp
+        LOGGER.debug(f"XGB Conf matrix: {conf}") #tn, fp, fn, tp
+        LOGGER.debug(f"XGB Conf matrix: {conf}") #tn, fp, fn, tp
         accuracy.append(acc)
         f1score.append(f1)
         precision.append(precision_)
@@ -214,7 +214,6 @@ def get_change_type_dist(all_type):
     return type_of_change_list
 
 def main():
-    print("In Main")
     global DATASET
     DATASET = str(sys.argv[1]) #get the type of data
     input_folder = str(sys.argv[2]) #get the type of data
@@ -229,19 +228,21 @@ def main():
     pt_list = []
     y_train_total = []
 
-    if (DATASET=='WESAD'):
-        print (DATASET)
-        learning_Ids = pd.read_csv(f'data/{DATASET}_learning_ids.csv')['ID'].tolist() #['S4', 'S9']
-        annonated_files = str(sys.argv[3]) #folder ro save them in
-        frequency = 4 #700Hz
-        window_size =  int(str(sys.argv[4]))
+    learning_Ids = pd.read_csv(f'data/{DATASET}_learning_ids.csv')['ID'].tolist() #['S4', 'S9']
+    annonated_files = str(sys.argv[3]) #folder ro save them in
+    frequency = 4 #700Hz
+    window_size =  int(str(sys.argv[4]))
     bkps_count_file = str(sys.argv[5])
+
     mdl_file = str(sys.argv[6]) #pickle file
 
-    now = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-    print_to_file(f"{now}-----------------------------NOW STARTING A NEW RUN- LEARNING.PY")
+    LOGGER.debug('learning_ids: %s, annotated_files: %s, frequency: %s, window_size: %s, bkps_count_file: %s, mdl_file: %s',
+                 learning_Ids, annonated_files, frequency, window_size, bkps_count_file, mdl_file)
 
-    print(f"Number of patients: {len(learning_Ids)}")
+    now = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+    LOGGER.debug(f"{now}-----------------------------NOW STARTING A NEW RUN- LEARNING_NOSNSTATIONARITY.PY")
+
+    LOGGER.debug(f"Number of patients: {len(learning_Ids)}")
 
     all_pt = pd.DataFrame()
     X_train_total = pd.DataFrame()
@@ -249,29 +250,32 @@ def main():
     #------------------------------------------comment just to run classifier
     for i in range(len(learning_Ids)):
         patient_id = learning_Ids[i]
-        print(f"i: {i} || Working on patient: {learning_Ids[i]}")
+        LOGGER.debug(f"i: {i} || Working on patient: {learning_Ids[i]}")
 
         #load eda data
         pt_sample = pd.read_csv(f'{input_folder}/{patient_id}/{patient_id}_eda.csv')
         pt_sample['cpd'] = 0
-        print_to_file(f"i: {i} || Working on patient: {learning_Ids[i]}. Patient length: {len(pt_sample)}")
+        LOGGER.debug(f"i: {i} || Working on patient: {learning_Ids[i]}. Patient length: {len(pt_sample)}")
         pt_sample = pt_sample.dropna()
         #pt_sample.set_index("dates", inplace=True)
 
-        print_to_file("Get the change point and duration")
+        LOGGER.debug("Get the change point and duration")
         trends = eda_utils.identify_df_trends(pt_sample, "eda_signal", window_size)
+        LOGGER.debug('Trends: %s', trends)
         #result, trends = cpd_utils.large_missing_intervals(trends, 120) #no need since there is no timestamp
         pt_data = eda_utils.annotate_cp_duration(pt_sample, trends) #annotate the data with the duration and cp
+        LOGGER.debug('pt_data (annotated with duration and cp from trends): %s', pt_data)
 
         #drop the non-significant
         pt_data, len_bkps, len_bkps_after = check_for_significance(pt_data)
         bkps_before.append(len_bkps) #number of bkps before checking for significance
         bkps_after.append(len_bkps_after)
-        print_to_file(f"Number of bkps before checking for significance: {len_bkps}. After checking: {len_bkps_after}")
+        LOGGER.debug(f"Number of bkps before checking for significance: {len_bkps}. After checking: {len_bkps_after}")
         pt_list.append(learning_Ids[i])
 
         #get the duration from the samples length
         pt_data['duration'] = pt_data['duration_samples']/frequency #in seconds
+        LOGGER.debug('pt_data["duration"] (after dividing duration_samples by frequency) is:\n%s', pt_data['duration'])
 
         #find the drastic jumps in the data (glucose at t - glucose at t-1)
         #pt_data['time_diff'] = pt_data['dates'].diff()
@@ -280,14 +284,15 @@ def main():
         eda_diff_list = eda_diff.tolist()
 
         if (len_bkps_after > 1):
+            LOGGER.debug('More than breakpoint found: %s', len_bkps_after)
             #get the duration
             duration = pt_data[pt_data['cpd'] == 1]['duration']
             duration_list = duration.tolist()
 
             #get type and intensity of change
-            print_to_file("Get the change type and intensity")
+            LOGGER.debug("Getting the change type and intensity")
             pt_data, change_type, means, std = type_of_change(pt_data)
-            print_to_file(f"Length of the change types, means, std: {len(change_type)} {len(means)} {len(std)}")
+            LOGGER.debug(f"Length of the change types, means, std: {len(change_type)} {len(means)} {len(std)}")
 
             #append the type and intensity of change
             all_type_of_change.extend(change_type)
@@ -299,24 +304,26 @@ def main():
             ## save the files
             file_name = f"{learning_Ids[i]}.csv"
             file_path = os.path.join(annonated_files,file_name)
+            LOGGER.debug('saving pt_data to %s', file_path)
             os.makedirs(annonated_files, exist_ok=True)
             pt_data.to_csv(file_path, index=False)
 
             #append the patient into a big df
-            #print(pt_data.head(5))
+            #LOGGER.debug(pt_data.head(5))
             all_pt = pd.concat([all_pt, pt_data], axis=0).reset_index(drop=True)
-            #print_to_file(all_pt.tail(5))
+            LOGGER.debug('all_pt = pd.concat([all_pt, pt_data], axis=0).reset_index(drop=True); all_pt.tail(t5) = %s', all_pt.tail(5))
 
             #get features
-            print_to_file(f"Number of rows in pt data: {len(pt_data)}")
+            LOGGER.debug(f"Number of rows in pt data: {len(pt_data)}")
             X_train, y_train, data = eda_utils.get_features(pt_data, DATASET, frequency, window_size)
             zeros = Counter(y_train)[0]
             ones = Counter(y_train)[1]
-            print_to_file(f"Number of rows in X_train data: {len(X_train)}. in y_train: {len(y_train)}: len of 0={zeros}, 1={ones}")
+            LOGGER.debug(f"Number of rows in X_train data: {len(X_train)}. in y_train: {len(y_train)}: len of 0={zeros}, 1={ones}")
 
             ## save the features to verify correctness
             file_name = f"{learning_Ids[i]}_features.csv"
             file_path = os.path.join(annonated_files,file_name)
+            LOGGER.debug('saving X_train features to %s', file_path)
             os.makedirs(annonated_files, exist_ok=True)
             X_train['PID'] = learning_Ids[i]
             X_train.to_csv(file_path, index=False)
@@ -325,31 +332,31 @@ def main():
             X_train_total = pd.concat([X_train_total, X_train], axis=0).reset_index(drop=True)
             y_train_total.extend(y_train)
         else:
-            print_to_file("Only one breakpoint found")
+            LOGGER.debug("Only one breakpoint found")
 
 
     #distribution of the type of change
-    print_to_file(f"Full length of all: {len(all_pt)}")
-    print_to_file(f"Full length. || X_train data: {len(X_train_total)}. in y_train: {len(y_train_total)}")
+    LOGGER.debug(f"Full length of all: {len(all_pt)}")
+    LOGGER.debug(f"Full length. || X_train data: {len(X_train_total)}. in y_train: {len(y_train_total)}")
     type_of_change_list = get_change_type_dist(all_type_of_change)
 
     #build classifier model for change point detection
     X_train_total['y'] = y_train_total #combine into one df
     os.makedirs("models", exist_ok=True)
     X_train_total.to_csv(f"models/{DATASET}_classifier_data.csv", index=False)
-    print_to_file(all_pt.tail(5))
+    LOGGER.debug('all_pt.tail(5) = %s', all_pt.tail(5))
     #'''#--------------------------------------------------------------------comment just to run classifier
-    X_train_total = pd.read_csv(f"models/{DATASET}_classifier_data.csv")
-    print_to_file(f"Total rows for all patients: {len(X_train_total)}")
+    # X_train_total = pd.read_csv(f"models/{DATASET}_classifier_data.csv")
+    LOGGER.debug(f"Total rows for all patients: {len(X_train_total)}")
     cpd_mdl = build_cpd_model(X_train_total)
-    print("Training completed")
-
+    LOGGER.debug("Training completed")
 
     #save the distribution to pkl
     mdl = {"mdl":cpd_mdl, "type_of_change":type_of_change_list,
     "mean_change": all_means, "std_change": all_std, "duration":all_duration, "eda_diff":all_eda_diff}
 
     # save dictionary to pkl file
+    LOGGER.debug('saving mdl to %s', mdl_file)
     eda_utils.save_to_pkl(mdl_file, mdl)
 
     #save the number of changepoints before and after checking for sig
@@ -359,10 +366,11 @@ def main():
     bkps_df['after_checking'] = bkps_after
 
     bkps_df.to_csv(bkps_count_file, index=False)
-    print_to_file(f"{now}-----------------------------END OF THE RUN- LEARNING.PY")
+    LOGGER.debug('saving %s to %s', bkps_df, bkps_count_file)
+    LOGGER.debug(f"{now}-----------------------------END OF THE RUN- LEARNING.PY")
 
 
 if __name__ == "__main__":
     start_time = time.time()
     main()
-    print("--- %s seconds ---" % (time.time() - start_time))
+    LOGGER.debug("--- %s seconds ---" % (time.time() - start_time))
