@@ -73,6 +73,7 @@ ${VENV} eda/classification.py sim_WESAD     data/wrist/simulated/eda_meanshift_c
 ${VENV} eda/classification.py sim_WESAD     data/wrist/simulated/eda_meansdshift_constant/ results/wrist/sim_msdc/
 ${VENV} eda/classification.py sim_WESAD     data/wrist/simulated/eda_meanshift_varying/    results/wrist/sim_msv/
 ${VENV} eda/classification.py sim_WESAD     data/wrist/simulated/eda_meansdshift_varying/  results/wrist/sim_msdv/
+${VENV} eda/classification.py sim_WESAD     data/wrist/simulated/eda_raw/                  results/wrist/sim
 
 # ───────────────────────────────
 # 8. SUMMARY TABLE
