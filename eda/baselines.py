@@ -53,23 +53,6 @@ def generate_durations(indices, freq, dur_array, df_length):
         durations.append(duration)
     return durations
 
-def predict_cpd_duration_1(file, filename, cpd_count, min_duration, max_duration):
-    LOGGER.debug("Predicting changepoint")
-    df = pd.read_csv(file)
-    # REAL_MEAN = 1.3347262513238476
-    # df['eda_signal'] *= REAL_MEAN / df['eda_signal'].mean()
-    df['PtID'] = filename
-    df['cpd'] = 0
-    freq = 4
-    #index_arr = [random.randint(0, len(df)) for _ in range(cpd_count)]
-    index_arr = random.sample(range(len(df)), cpd_count) #random unique values
-    index_arr.sort()
-    duration_arr = generate_durations(index_arr, freq,  min_duration, max_duration, len(df))
-    cpd_details = pd.DataFrame()
-    cpd_details['CPD_Index'] = index_arr
-    cpd_details['duration'] = duration_arr
-    return cpd_details
-
 def generate_indices(data_len, mindist, cpd_count):
     '''
     Genrate the random indices for the chnagepoints
@@ -80,13 +63,12 @@ def generate_indices(data_len, mindist, cpd_count):
     #return [(mindist-1)*i + x for i, x in enumerate(sorted(random.sample(range(range_size), cpd_count)))]
     return [(mindist-1)*i + x for i, x in enumerate(sorted(random.sample(range(1, range_size), cpd_count)))]
 
-def predict_cpd_duration(file, filename, cpd_count_arr, duration, dist_type):
+def predict_cpd_duration(file, filename, cpd_count_arr, duration, dist_type, freq):
     LOGGER.debug("Predicting changepoint for file %s and filename %s with cpd_count_arr %s, duration %s, dist_type %s",
                  file, filename, cpd_count_arr, duration, dist_type)
     df = pd.read_csv(file)
     df['PtID'] = filename
     df['cpd'] = 0
-    freq = 4
     min_duration = duration[-1]
 
     if ((dist_type == '1')  or (dist_type == '2')):
@@ -112,8 +94,8 @@ def predict_cpd_duration(file, filename, cpd_count_arr, duration, dist_type):
     return cpd_details
 
 
-def predict_change_properties(file, filename, cpd_details_folder,cpd_count, duration, mean_change, std_change, dist_type):
-    cpd_details = predict_cpd_duration(file, filename, cpd_count, duration, dist_type)
+def predict_change_properties(file, filename, cpd_details_folder,cpd_count, duration, mean_change, std_change, dist_type, freq):
+    cpd_details = predict_cpd_duration(file, filename, cpd_count, duration, dist_type, freq)
     bkps_len = len(cpd_details)
     LOGGER.debug(f"Total cpd in this file: {bkps_len}")
     std_change_drawn = np.nan
@@ -320,14 +302,15 @@ def main():
     mean_change =  [-226.88, 183.88, 0, 1,1]
     std_change =  [-93.50, 95.56, 0.1, 0.01,0.5]
     dist_type = str(sys.argv[5])
-    freq=4
+    freq=4 if 'wrist' in output_folder.lower() else 12
+    LOGGER.debug(f'Using frequency of {freq}')
 
     for file in glob.glob(input_folder):
         filename2 = os.path.basename(file)
         filename = os.path.splitext(filename2)[0].split('_')[0]
         LOGGER.debug(f"{file}----{filename}")
         LOGGER.debug(f"Processing: {file}")
-        sim_data = predict_change_properties(file,filename,cpd_details_folder, cpd_count, duration, mean_change, std_change, dist_type)
+        sim_data = predict_change_properties(file,filename,cpd_details_folder, cpd_count, duration, mean_change, std_change, dist_type, freq)
         LOGGER.debug("Done predicting change properties. Start modifying the values")
         sim_data = modify_values(sim_data,freq)
 

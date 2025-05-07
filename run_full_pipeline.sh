@@ -54,14 +54,14 @@ ${VENV} eda/learning_nonstationarity.py \
 # ───────────────────────────────
 # 6. AUGMENT SYNTHETIC  → data/simulated/eda_aug/
 # ───────────────────────────────
-# echo ">> Augmenting synthetic EDA with learned CPDs"
+echo ">> Augmenting synthetic EDA with learned CPDs"
 ${VENV} eda/simulating.py \
         WESAD \
         data/wrist/simulated/eda_raw/ \
         data/wrist/simulated/eda_aug/ \
         models/wrist/wesad_cp_model.pkl \
         data/wrist/eda/cpd_aug_details/ \
-        0.12
+        0.03
 
 # ───────────────────────────────
 # 7. CLASSIFICATION  (6 runs)

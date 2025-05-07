@@ -47,6 +47,8 @@ def main():
             else:
                 LOGGER.debug('Loading chest data from signal:chest:EDA')
                 eda_4hz = np.asarray(obj['signal']['chest']['EDA']).flatten()
+                LOGGER.debug('Downsizing chest data from 700hz to 12hz')
+                eda_4hz = eda_4hz[::58]
         except Exception as exc:
             raise ValueError(f"Could not find EDA data: {exc}")
 
@@ -59,6 +61,9 @@ def main():
         if sample_type != 'chest':
             LOGGER.debug('Downsizing labels from 700->4 hz to match 4hz wrist EDA data.')
             lbl_4hz = lbl_raw[::175]
+        else:
+            LOGGER.debug('Downsizing labels from 700->12 hz to match 4hz chest EDA data.')
+            lbl_4hz = lbl_raw[::58]
 
         if len(eda_4hz) != len(lbl_4hz):
             raise RuntimeError(f"Warning: lengths do not match; EDA={len(eda_4hz)}, label={len(lbl_4hz)}")

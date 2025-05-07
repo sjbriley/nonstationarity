@@ -69,7 +69,7 @@ def sample_from_dist(data_to_fit, sample_size, dist_name, params): #(data_to_fit
     #LOGGER.debug(f"Distribution: {dist_name} || Params: {params} || Sampled data: {data}")
     return data
 
-def predict_cpd_duration(file, mdl_dict,filename):
+def predict_cpd_duration(file, mdl_dict,filename, freq):
     LOGGER.debug("Predicting changepoint")
     ## fit the duration to a distrbution
     dist_name, params = eda_utils.get_dist(mdl_dict['duration'],data_name='')
@@ -81,8 +81,7 @@ def predict_cpd_duration(file, mdl_dict,filename):
     index_arr = []
     duration_arr = []
 
-    window_size = 10 #10, 5seconds #15
-    freq = 4
+    window_size = 5 #10, 5seconds #15
     window_size = window_size * freq
     # cfg_file = tsfel.load_json("features_simple.json")
     cfg_file = tsfel.get_features_by_domain()
@@ -97,7 +96,7 @@ def predict_cpd_duration(file, mdl_dict,filename):
         X_train = tsfel.time_series_features_extractor(
                     cfg_file,
                     window,
-                    fs=freq,                 # freq = 4 earlier in the function
+                    fs=freq,
                     verbose=0,
                     n_jobs=0)
 
@@ -122,8 +121,21 @@ def predict_cpd_duration(file, mdl_dict,filename):
     cpd_details['duration'] = duration_arr
     return cpd_details
 
-def predict_change_properties(file, mdl_dict, filename, cpd_details_folder):
-    cpd_details = predict_cpd_duration(file, mdl_dict, filename)
+def predict_change_properties(file, mdl_dict, filename, cpd_details_folder, freq):
+    cpd_details = predict_cpd_duration(file, mdl_dict, filename, freq)
+
+    # ensure at least two change-points for WESAD-like data
+    df = pd.read_csv(file)
+    if len(cpd_details) < 2:
+        total_len = len(df)
+        fallback_idxs = [total_len // 2, int(total_len * 0.8)]
+        # use median duration if available, else first entry
+        dur = mdl_dict['duration'][len(mdl_dict['duration']) // 2]
+        cpd_details = pd.DataFrame({
+            'CPD_Index': fallback_idxs,
+            'duration': [dur, dur]
+        })
+
     types = mdl_dict['type_of_change']['type']
     types_prop = mdl_dict['type_of_change']['prob']
     LOGGER.debug(f'types: {types}')
@@ -288,22 +300,17 @@ def modify_property(change_type, post_bkp, change_properties, pre_bkp, threshold
 
     for i in range(len(duration_array)): #ensure it's not < or > min/max eda
         new_value_original = post_ckp_new_original[i]
-        new_value = new_value_original
-        if new_value < min_value:
-            LOGGER.debug("Value too low")
-            new_value = min_value
-        elif new_value > max_value:
-            LOGGER.debug("Value too high")
-            new_value = max_value
-        #LOGGER.debug(f"index: {i} | time_passed: {time_passed} | change: {change} | old_value: {post_ckp[i]} | new_value: {new_value}")
-        LOGGER.debug(f"initial_value: {post_ckp[i]} | new_value_original: {new_value_original} | new_value: {new_value} | prev_value: {previous_value}")
+        # clamp within realistic bounds
+        new_value = max(min_value, min(new_value_original, max_value))
         post_ckp_new.append(new_value)
     return post_ckp_new_original, post_ckp_new, change_sigma_new
+
 def main():
     global DATASET
     DATASET = str(sys.argv[1]) #get the type of data
     input_folder = str(sys.argv[2]) + "*_eda.csv"
     output_folder = str(sys.argv[3])
+    freq = 4 if 'wrist' in output_folder.lower() else 12
     mdl_file =str(sys.argv[4])
     cpd_details_folder = str(sys.argv[5])
     threshold = str(sys.argv[6])
@@ -320,7 +327,7 @@ def main():
         filename = os.path.splitext(filename2)[0].split('_')[0]
         LOGGER.debug(f"{file}----{filename}")
         LOGGER.debug(f"Processing: {file}")
-        sim_data = predict_change_properties(file, mdl_dict,filename,cpd_details_folder)
+        sim_data = predict_change_properties(file, mdl_dict,filename,cpd_details_folder, freq)
         LOGGER.debug("Done predicting change properties. Start modifying the values")
         sim_data = modify_values(sim_data, threshold)
 

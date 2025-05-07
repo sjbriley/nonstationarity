@@ -26,7 +26,7 @@ def main():
     sample_type = sys.argv[1]
     if sample_type == 'chest':
         output_dir = "data/chest/simulated/eda_raw"
-        sample_rate = 700
+        sample_rate = 12
         LOGGER.debug('Generating simulated EDA data for chest with sample rate %s to %s', sample_rate, output_dir)
     else:
         output_dir = "data/wrist/simulated/eda_raw"
@@ -35,7 +35,9 @@ def main():
     os.makedirs(output_dir, exist_ok=True)
 
     all_dfs = []
-    for fpath in glob.glob("data/wrist/wesad/*/*_eda.csv"):
+    path = "data/wrist/wesad/*/*_eda.csv" if 'wrist' == sample_type else "data/chest/wesad/*/*_eda.csv"
+    LOGGER.debug(f'Pulling mean & std from real data at {path}')
+    for fpath in glob.glob(path):
         df = pd.read_csv(fpath)
         all_dfs.append(df)
     real_full = pd.concat(all_dfs, ignore_index=True)

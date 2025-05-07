@@ -43,6 +43,10 @@ def extract_features(df_patient, sampling_freq, window_size):
     If freq is 4Hz, and the window_size is 10 secs, that's 40 samples
     '''
     window_length = window_size * sampling_freq
+    # normalize raw EDA per patient
+    df_patient['eda_signal'] = (
+        df_patient['eda_signal'] - df_patient['eda_signal'].mean()
+    ) / df_patient['eda_signal'].std()
     feature_vectors = []
     labels = []
     # Iterate through the data with the sliding window
@@ -199,7 +203,7 @@ def main():
     data_name = str(sys.argv[1])
     data_folder = str(sys.argv[2])  #folder containing the patient files
     result_folder = str(sys.argv[3]) #folder to save the results files.
-    freq = 4
+    freq = 4 if 'wrist' in result_folder.lower() else 12
     # window_size = 5
     window_size = 10
     LOGGER.debug(data_folder)

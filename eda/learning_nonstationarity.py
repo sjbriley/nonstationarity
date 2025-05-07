@@ -230,7 +230,8 @@ def main():
 
     learning_Ids = pd.read_csv(f'data/{DATASET}_learning_ids.csv')['ID'].tolist() #['S4', 'S9']
     annonated_files = str(sys.argv[3]) #folder ro save them in
-    frequency = 4 #700Hz
+    frequency = 4 if 'wrist' in input_folder.lower() else 12
+    LOGGER.debug(f'Using frequency of {frequency}')
     window_size =  int(str(sys.argv[4]))
     bkps_count_file = str(sys.argv[5])
 
